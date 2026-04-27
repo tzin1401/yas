@@ -8,7 +8,7 @@
 ## Phase 1: Setup & Foundation (Tuần 1)
 
 ### C1. Khảo sát cấu trúc monorepo YAS
-- **Ưu tiên:** 🔴 Cao | **Deadline:** Ngày 1-2 | **Status:** ⬜
+- **Ưu tiên:** 🔴 Cao | **Deadline:** Ngày 1-2 | **Status:** ✅
 - **Chi tiết:**
   - Clone repo YAS đã fork
   - Liệt kê tất cả service và đường dẫn thư mục:
