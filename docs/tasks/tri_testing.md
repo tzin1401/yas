@@ -26,7 +26,7 @@
 - **Output:** Bảng liệt kê service + đường dẫn thư mục
 
 ### C2. Xác định test framework
-- **Ưu tiên:** 🔴 Cao | **Deadline:** Ngày 2 | **Status:** ⬜
+- **Ưu tiên:** 🔴 Cao | **Deadline:** Ngày 2 | **Status:** ✅
 - **Chi tiết:**
   - Kiểm tra `pom.xml` hoặc `build.gradle` từng service
   - Xác định: Maven hay Gradle? JUnit 4 hay 5? Có Mockito/Testcontainers không?
@@ -35,7 +35,7 @@
 - **Output:** Bảng tổng hợp build tool + test framework từng service
 
 ### C3. Đánh giá coverage hiện tại
-- **Ưu tiên:** 🟡 TB | **Deadline:** Ngày 3 | **Status:** ⬜
+- **Ưu tiên:** 🟡 TB | **Deadline:** Ngày 3 | **Status:** ✅
 - **Chi tiết:**
   - Chạy test + JaCoCo report local cho từng service:
     ```bash
