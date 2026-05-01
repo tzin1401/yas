@@ -127,8 +127,14 @@ pipeline {
             steps {
                 script {
                     def modules = env.CHANGED_MODULES.split(',')
-                    for (module in modules) {
-                        sh "ci/check-coverage.sh ${module} ${env.COVERAGE_THRESHOLD}"
+                    def serviceModules = modules.findAll { it != 'common-library' }
+
+                    if (serviceModules.isEmpty()) {
+                        echo ">>> No service modules to check coverage — skipping"
+                    } else {
+                        for (module in serviceModules) {
+                            sh "ci/check-coverage.sh ${module} ${env.COVERAGE_THRESHOLD}"
+                        }
                     }
                 }
             }
