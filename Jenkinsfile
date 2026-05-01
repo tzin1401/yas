@@ -107,17 +107,14 @@ pipeline {
         stage('Gitleaks – Secret Scan') {
             steps {
                 sh '''
-                    echo ">>> Running Gitleaks secret scan..."
-                    docker run --rm \
-                      -v "$(pwd):/repo" \
-                      zricethezav/gitleaks:latest \
-                        detect \
-                        --source /repo \
-                        --config /repo/gitleaks.toml \
-                        --gitleaks-ignore-path /repo/.gitleaksignore \
-                        --verbose \
-                        --no-git \
-                        --exit-code 1
+                    echo ">>> Downloading and running Gitleaks secret scan..."
+                    if [ ! -f gitleaks ]; then
+                        curl -sSLo gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz
+                        tar -xzf gitleaks.tar.gz gitleaks
+                        rm gitleaks.tar.gz
+                    fi
+                    chmod +x gitleaks
+                    ./gitleaks detect --source=. --config=gitleaks.toml --verbose --no-git --exit-code=1
                     echo ">>> Gitleaks scan PASSED - no secrets found"
                 '''
             }
