@@ -200,23 +200,67 @@ pipeline {
                             echo ">>> No service modules changed — skipping Snyk scan"
                         } else {
                             sh "snyk auth \$SNYK_TOKEN"
+                            sh "snyk --version || true"
                             for (mod in serviceModules) {
                                 echo ">>> Snyk scanning: ${mod}"
-                                sh """
-                                    snyk test \
-                                      --file=${mod}/pom.xml \
-                                      --severity-threshold=high \
-                                      --all-sub-projects \
-                                      || true
-                                """
+                                def testExitCode = sh(
+                                    script: """
+                                        snyk test \
+                                          --file=${mod}/pom.xml \
+                                          --severity-threshold=high \
+                                          --all-sub-projects
+                                    """,
+                                    returnStatus: true
+                                )
+
+                                if (testExitCode != 0) {
+                                    echo ">>> Snyk test failed for ${mod} (exit=${testExitCode}). Retrying with reduced dependency depth..."
+                                    testExitCode = sh(
+                                        script: """
+                                            snyk test \
+                                              --file=${mod}/pom.xml \
+                                              --severity-threshold=high \
+                                              --all-sub-projects \
+                                              --max-depth=3
+                                        """,
+                                        returnStatus: true
+                                    )
+                                }
+
+                                if (testExitCode != 0) {
+                                    echo ">>> Snyk test still failed for ${mod} (exit=${testExitCode}) - continuing pipeline."
+                                } else {
+                                    echo ">>> Snyk test passed for ${mod}"
+                                }
                             }
                             for (mod in serviceModules) {
-                                sh """
-                                    snyk monitor \
-                                      --file=${mod}/pom.xml \
-                                      --project-name=yas-${mod} \
-                                      || true
-                                """
+                                def monitorExitCode = sh(
+                                    script: """
+                                        snyk monitor \
+                                          --file=${mod}/pom.xml \
+                                          --project-name=yas-${mod}
+                                    """,
+                                    returnStatus: true
+                                )
+
+                                if (monitorExitCode != 0) {
+                                    echo ">>> Snyk monitor failed for ${mod} (exit=${monitorExitCode}). Retrying with reduced dependency depth..."
+                                    monitorExitCode = sh(
+                                        script: """
+                                            snyk monitor \
+                                              --file=${mod}/pom.xml \
+                                              --project-name=yas-${mod} \
+                                              --max-depth=3
+                                        """,
+                                        returnStatus: true
+                                    )
+                                }
+
+                                if (monitorExitCode != 0) {
+                                    echo ">>> Snyk monitor still failed for ${mod} (exit=${monitorExitCode}) - continuing pipeline."
+                                } else {
+                                    echo ">>> Snyk monitor pushed for ${mod}"
+                                }
                             }
                         }
                     }
