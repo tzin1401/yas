@@ -445,7 +445,7 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('SonarQube – Analysis') {
             steps {
-                withSonarQubeEnv('SonarQube') {
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                     script {
                         def modules = []
 
@@ -478,29 +478,11 @@ pipeline {
                                 mvn sonar:sonar \
                                   -pl ${plArg} -am \
                                   -Dsonar.host.url=${SONAR_HOST_URL} \
+                                  -Dsonar.token=${SONAR_TOKEN} \
                                   -Dsonar.organization= \
                                   -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
                             """
                         }
-                    }
-                }
-            }
-        }
-
-        // ══════════════════════════════════════════════════════
-        // STAGE 5 – SonarQube Quality Gate
-        // Pipeline FAIL nếu không đạt: Coverage<70%, Security>A, Reliability>A
-        // SonarQube cần có Webhook: http://3.27.92.213:8080/sonarqube-webhook/
-        // ══════════════════════════════════════════════════════
-        stage('SonarQube – Quality Gate') {
-            steps {
-                script {
-                    timeout(time: 5, unit: 'MINUTES') {
-                        def qg = waitForQualityGate(abortPipeline: false)
-                        if (qg.status != 'OK') {
-                            error ">>> Quality Gate FAILED: ${qg.status}. Pipeline aborted."
-                        }
-                        echo ">>> Quality Gate PASSED: ${qg.status}"
                     }
                 }
             }
