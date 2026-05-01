@@ -50,7 +50,7 @@ changed_files="$(git diff --name-only "${base_ref}"...HEAD || true)"
 
 # If shared build or root files change, rebuild all modules.
 if [[ -z "${changed_files}" ]] \
-  || grep -Eq '^(pom\.xml|\.github/|checkstyle/|common-library/|docker/|k8s/|scripts/)' <<<"${changed_files}"; then
+  || grep -Eq '^(pom\.xml|Jenkinsfile|\.github/|checkstyle/|ci/|common-library/|docker/|k8s/|scripts/)' <<< "${changed_files}"; then
   printf '%s\n' "${modules[@]}" | paste -sd ','
   exit 0
 fi
