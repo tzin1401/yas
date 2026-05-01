@@ -19,6 +19,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                sh 'git fetch origin main:refs/remotes/origin/main || true'
                 sh 'chmod +x ci/detect-changed-modules.sh ci/check-coverage.sh'
             }
         }
