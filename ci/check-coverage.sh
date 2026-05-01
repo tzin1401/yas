@@ -15,9 +15,10 @@ if [[ ! -f "${report_path}" ]]; then
   exit 0
 fi
 
-line_counter="$(awk -F'"' '/<counter type="LINE"/ {print $0; exit}' "${report_path}")"
-covered="$(awk -F'"' '/<counter type="LINE"/ {for(i=1;i<=NF;i++){if($i=="covered"){print $(i+1); exit}}}' "${report_path}")"
-missed="$(awk -F'"' '/<counter type="LINE"/ {for(i=1;i<=NF;i++){if($i=="missed"){print $(i+1); exit}}}' "${report_path}")"
+# Get the LAST LINE counter (report-level aggregate, not method-level)
+line_counter="$(grep '<counter type="LINE"' "${report_path}" | tail -1)"
+covered="$(echo "${line_counter}" | sed 's/.*covered="\([0-9]*\)".*/\1/')"
+missed="$(echo "${line_counter}" | sed 's/.*missed="\([0-9]*\)".*/\1/')"
 
 if [[ -z "${line_counter}" || -z "${covered}" || -z "${missed}" ]]; then
   echo "[WARN] No LINE coverage data in ${report_path} — skipping coverage gate for ${module}"
