@@ -82,7 +82,10 @@ pipeline {
                         rm gitleaks.tar.gz
                     fi
                     chmod +x gitleaks
-                    ./gitleaks detect --source=. --config=gitleaks.toml --verbose --no-git --exit-code=1
+                    ./gitleaks detect --source=. --config=gitleaks.toml --verbose --report-path=gitleaks-report.json --exit-code=1 || {
+                        echo ">>> Gitleaks found potential secrets - check gitleaks-report.json"
+                        exit 1
+                    }
                     echo ">>> Gitleaks scan PASSED - no secrets found"
                 '''
             }
