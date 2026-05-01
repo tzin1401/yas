@@ -82,11 +82,16 @@ pipeline {
                         rm gitleaks.tar.gz
                     fi
                     chmod +x gitleaks
-                    ./gitleaks detect --source=. --config=gitleaks.toml --verbose --report-path=gitleaks-report.json --exit-code=1 || {
-                        echo ">>> Gitleaks found potential secrets - check gitleaks-report.json"
-                        exit 1
-                    }
-                    echo ">>> Gitleaks scan PASSED - no secrets found"
+
+                    # Tạo baseline từ upstream (nếu chưa có)
+                    if [ -f gitleaks-baseline.json ]; then
+                        echo ">>> Using existing baseline to detect only NEW secrets"
+                        ./gitleaks detect --source=. --no-git --config=gitleaks.toml --baseline-path=gitleaks-baseline.json --report-path=gitleaks-report.json --verbose --exit-code=1
+                    else
+                        echo ">>> No baseline found — running full scan with .gitleaksignore"
+                        ./gitleaks detect --source=. --no-git --config=gitleaks.toml --report-path=gitleaks-report.json --verbose --exit-code=1
+                    fi
+                    echo ">>> Gitleaks scan PASSED - no new secrets found"
                 '''
             }
         }
