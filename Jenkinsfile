@@ -197,12 +197,19 @@ pipeline {
                         if (serviceModules.isEmpty()) {
                             echo "Snyk: skip"
                         } else {
-                            sh "snyk auth \$SNYK_TOKEN"
-                            for (mod in serviceModules) {
-                                sh "snyk test --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3"
-                            }
-                            for (mod in serviceModules) {
-                                sh "snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} --max-depth=3"
+                            // Snyk CLI is Node-based; Maven resolver children need RAM — exit -13 is often OOM.
+                            // Scan light → full reactor → capped depth (avoid starting with --all-sub-projects only).
+                            withEnv([
+                                'NODE_OPTIONS=--max-old-space-size=6144',
+                                'MAVEN_OPTS=-Xmx1536m -XX:MaxMetaspaceSize=384m'
+                            ]) {
+                                sh "snyk auth \$SNYK_TOKEN"
+                                for (mod in serviceModules) {
+                                    sh "snyk test --file=${mod}/pom.xml --severity-threshold=high || snyk test --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3"
+                                }
+                                for (mod in serviceModules) {
+                                    sh "snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects || snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects --max-depth=3"
+                                }
                             }
                         }
                     }
