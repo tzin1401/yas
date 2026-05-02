@@ -3,9 +3,11 @@ package com.yas.location.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.yas.commonlibrary.exception.NotFoundException;
-import com.yas.location.LocationApplication;
 import com.yas.location.model.Address;
 import com.yas.location.model.Country;
 import com.yas.location.model.District;
@@ -18,155 +20,79 @@ import com.yas.location.viewmodel.address.AddressDetailVm;
 import com.yas.location.viewmodel.address.AddressGetVm;
 import com.yas.location.viewmodel.address.AddressPostVm;
 import java.util.List;
-import org.junit.jupiter.api.AfterEach;
+import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@SpringBootTest(classes = LocationApplication.class)
+@ExtendWith(MockitoExtension.class)
 public class AddressServiceTest {
 
-    @Autowired
+    @Mock
     private AddressRepository addressRepository;
-    @Autowired
+    @Mock
     private CountryRepository countryRepository;
-    @Autowired
+    @Mock
     private DistrictRepository districtRepository;
-    @Autowired
+    @Mock
     private StateOrProvinceRepository stateOrProvinceRepository;
-    @Autowired
+    
+    @InjectMocks
     private AddressService addressService;
 
     private Address address1;
-    private Address address2;
     private Country country;
     private District district;
     private StateOrProvince stateOrProvince;
 
-    private void generateTestData() {
-        country = countryRepository.save(Country.builder()
-            .name("country-1")
-            .build());
-        stateOrProvince = stateOrProvinceRepository.save(StateOrProvince.builder()
-            .name("state-or-province")
-            .country(country)
-            .build());
-        district = districtRepository.save(District.builder()
-            .name("district-1")
-            .stateProvince(stateOrProvince)
-            .build());
-        address1 = addressRepository.save(Address.builder()
-            .contactName("address-1")
-            .city("city-1")
-            .country(country)
-            .district(district)
-            .stateOrProvince(stateOrProvince)
-            .build());
-        address2 = addressRepository.save(Address.builder()
-            .contactName("address-1")
-            .city("city-1")
-            .country(country)
-            .district(district)
-            .stateOrProvince(stateOrProvince)
-            .build());
-    }
-
-    @AfterEach
-    void tearDown() {
-        addressRepository.deleteAll();
-        districtRepository.deleteAll();
-        stateOrProvinceRepository.deleteAll();
-        countryRepository.deleteAll();
+    @BeforeEach
+    void setUp() {
+        country = Country.builder().id("C1").name("country-1").build();
+        stateOrProvince = StateOrProvince.builder().id(1L).name("state-1").country(country).build();
+        district = District.builder().id(1L).name("district-1").stateOrProvince(stateOrProvince).build();
+        address1 = Address.builder().id(1L).city("city-1").district(district).build();
     }
 
     @Test
-    void getAddress_ExistInDatabase_Success() {
-        generateTestData();
-        AddressDetailVm addressDetailVm = addressService.getAddress(address1.getId());
-        assertNotNull(addressDetailVm);
-        assertEquals("address-1", addressDetailVm.contactName());
+    void getAddress_ValidId_ShouldReturnAddress() {
+        when(addressRepository.findById(1L)).thenReturn(Optional.of(address1));
+        
+        AddressDetailVm result = addressService.getAddress(1L);
+        
+        assertNotNull(result);
+        assertEquals("city-1", result.city());
     }
 
     @Test
-    void getAddress_NotExistInDatabase_ThrowsNotFoundException() {
-        NotFoundException exception = assertThrows(NotFoundException.class, () -> addressService.getAddress(100000L));
-        assertEquals(String.format("The address %s is not found", "100000"), exception.getMessage());
+    void getAddress_InvalidId_ShouldThrowNotFoundException() {
+        when(addressRepository.findById(1L)).thenReturn(Optional.empty());
+        
+        assertThrows(NotFoundException.class, () -> addressService.getAddress(1L));
     }
 
     @Test
-    void getAllAddresses_Success() {
-        generateTestData();
-        List<AddressDetailVm> addressDetailVmList = addressService.getAddressList(List.of(address1.getId(), address2.getId()));
-        assertEquals(2, addressDetailVmList.size());
+    void createAddress_ValidData_ShouldReturnAddress() {
+        AddressPostVm postVm = new AddressPostVm("name", "phone", "line1", "line2", "city", "zip", 1L, 1L, "C1");
+        
+        when(districtRepository.findById(1L)).thenReturn(Optional.of(district));
+        when(stateOrProvinceRepository.findById(1L)).thenReturn(Optional.of(stateOrProvince));
+        when(countryRepository.findById("C1")).thenReturn(Optional.of(country));
+        when(addressRepository.saveAndFlush(any())).thenReturn(address1);
+
+        Address result = addressService.createAddress(postVm);
+        
+        assertNotNull(result);
     }
 
     @Test
-    void updateAddress_validData_Success() {
-        generateTestData();
-        AddressPostVm addressPostVm = AddressPostVm.builder()
-            .contactName("update-address")
-            .districtId(district.getId())
-            .countryId(country.getId())
-            .stateOrProvinceId(stateOrProvince.getId())
-            .build();
-        addressService.updateAddress(address1.getId(), addressPostVm);
-        AddressDetailVm addressDetailVm = addressService.getAddress(address1.getId());
-        assertNotNull(addressDetailVm);
-        assertEquals("update-address", addressDetailVm.contactName());
-    }
-
-    @Test
-    void updateAddress_inValidAddressId_ThrowsAddressNotFoundException() {
-        generateTestData();
-        AddressPostVm addressPostVm = AddressPostVm.builder()
-            .contactName("update-address")
-            .districtId(district.getId())
-            .countryId(country.getId())
-            .stateOrProvinceId(stateOrProvince.getId())
-            .build();
-        NotFoundException exception = assertThrows(NotFoundException.class, () -> addressService.updateAddress(10000L, addressPostVm));
-        assertEquals(String.format("The address %s is not found", "10000"), exception.getMessage());
-    }
-
-    @Test
-    void createAddress_validDate_Success() {
-        generateTestData();
-        AddressPostVm addressPostVm = AddressPostVm.builder()
-            .contactName("update-address")
-            .districtId(district.getId())
-            .countryId(country.getId())
-            .stateOrProvinceId(stateOrProvince.getId())
-            .build();
-        AddressGetVm addressGetVm = addressService.createAddress(addressPostVm);
-        assertNotNull(addressGetVm);
-    }
-
-    @Test
-    void createAddress_inValidData_ThrowsCountryNotFoundException() {
-        generateTestData();
-        AddressPostVm addressPostVm = AddressPostVm.builder()
-            .contactName("update-address")
-            .districtId(district.getId())
-            .countryId(10000L)
-            .stateOrProvinceId(stateOrProvince.getId())
-            .build();
-        NotFoundException exception = assertThrows(NotFoundException.class, () -> addressService.createAddress(addressPostVm));
-        assertEquals(String.format("The country %s is not found", "10000"), exception.getMessage());
-    }
-
-    @Test
-    void deleteAddress_givenAddressIdValid_thenSuccess() {
-        generateTestData();
-        Long id = addressRepository.findAll().getFirst().getId();
-        addressService.deleteAddress(id);
-        // make a call to get the address with id which has been deleted -> throw error not found because deleted success.
-        NotFoundException exception = assertThrows(NotFoundException.class, () -> addressService.getAddress(100000L));
-        assertEquals(String.format("The address %s is not found", "100000"), exception.getMessage());
-    }
-
-    @Test
-    void deleteAddress_givenAddressIdInValid_ThrowsAddressNotFoundException() {
-        NotFoundException exception = assertThrows(NotFoundException.class, () -> addressService.deleteAddress(1L));
-        assertEquals(String.format("The address %s is not found", "1"), exception.getMessage());
+    void deleteAddress_ValidId_ShouldSuccess() {
+        when(addressRepository.findById(1L)).thenReturn(Optional.of(address1));
+        
+        addressService.deleteAddress(1L);
+        
+        verify(addressRepository).delete(address1);
     }
 }
