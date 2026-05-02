@@ -1,8 +1,9 @@
 // ============================================================
 //  YAS Monorepo – Jenkins CI Pipeline (Merged)
-//  Platform : Jenkins trên AWS (http://3.27.92.213:8080)
+//  Controller (AWS): orchestration + UI + logs.
+//  Agents (máy nhóm): build/test/scan — label: yas-build-worker
 //  SonarQube: http://3.27.92.213:9000
-//  JDK      : 25  |  Maven: latest LTS
+//  JDK/Maven tools: JDK-25, Maven (Global Tool Configuration)
 // ============================================================
 //
 //  Pipeline flow:
@@ -17,12 +18,12 @@
 // ============================================================
 
 pipeline {
-    agent any
-
-    tools {
-        maven 'Maven'
-        jdk   'JDK-25'
+    agent {
+        label 'yas-build-worker'
     }
+
+    // JDK/Maven: resolve once via tool step (avoids repeating "Tool Installation" every stage).
+    // Names must match Jenkins → Manage Jenkins → Tools (JDK-25, Maven).
 
     options {
         timestamps()
@@ -32,9 +33,10 @@ pipeline {
     }
 
     environment {
-        COVERAGE_THRESHOLD = '70'
-        SONAR_HOST_URL     = 'http://3.27.92.213:9000'
-        MAVEN_OPTS         = '-Xmx512m -XX:MaxMetaspaceSize=256m'
+        COVERAGE_THRESHOLD   = '70'
+        SONAR_HOST_URL       = 'http://3.27.92.213:9000'
+        MAVEN_OPTS           = '-Xmx512m -XX:MaxMetaspaceSize=256m'
+        GITLEAKS_EXPECTED    = '8.18.4'
     }
 
     stages {
@@ -44,9 +46,18 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('Checkout') {
             steps {
+                script {
+                    def jdkHome = tool name: 'JDK-25', type: 'jdk'
+                    env.JAVA_HOME = jdkHome
+                    env.PATH = "${jdkHome}/bin:${env.PATH}"
+                    def mvnHome = tool name: 'Maven', type: 'maven'
+                    env.M2_HOME = mvnHome
+                    env.PATH = "${mvnHome}/bin:${env.PATH}"
+                }
                 checkout scm
                 sh 'git fetch origin main:refs/remotes/origin/main || true'
-                sh 'chmod +x ci/detect-changed-modules.sh ci/check-coverage.sh'
+                sh 'chmod +x ci/detect-changed-modules.sh ci/check-coverage.sh ci/verify-ci-tools.sh'
+                sh 'ci/verify-ci-tools.sh'
             }
         }
 
@@ -61,9 +72,7 @@ pipeline {
                         script: 'ci/detect-changed-modules.sh',
                         returnStdout: true
                     ).trim()
-                    echo "============================================"
-                    echo "Modules selected for CI: ${env.CHANGED_MODULES}"
-                    echo "============================================"
+                    echo "CHANGED_MODULES=${env.CHANGED_MODULES}"
                 }
             }
         }
@@ -75,23 +84,12 @@ pipeline {
         stage('Gitleaks – Secret Scan') {
             steps {
                 sh '''
-                    echo ">>> Downloading and running Gitleaks secret scan..."
-                    if [ ! -f gitleaks ]; then
-                        curl -sSLo gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.18.4/gitleaks_8.18.4_linux_x64.tar.gz
-                        tar -xzf gitleaks.tar.gz gitleaks
-                        rm gitleaks.tar.gz
-                    fi
-                    chmod +x gitleaks
-
-                    # Tạo baseline từ upstream (nếu chưa có)
                     if [ -f gitleaks-baseline.json ]; then
-                        echo ">>> Using existing baseline to detect only NEW secrets"
-                        ./gitleaks detect --source=. --no-git --config=gitleaks.toml --baseline-path=gitleaks-baseline.json --report-path=gitleaks-report.json --verbose --exit-code=1
+                        gitleaks detect --source=. --no-git --config=gitleaks.toml --baseline-path=gitleaks-baseline.json --report-path=gitleaks-report.json --exit-code=1
                     else
-                        echo ">>> No baseline found — running full scan with .gitleaksignore"
-                        ./gitleaks detect --source=. --no-git --config=gitleaks.toml --report-path=gitleaks-report.json --verbose --exit-code=1
+                        gitleaks detect --source=. --no-git --config=gitleaks.toml --report-path=gitleaks-report.json --exit-code=1
                     fi
-                    echo ">>> Gitleaks scan PASSED - no new secrets found"
+                    echo "Gitleaks: OK"
                 '''
             }
         }
@@ -130,7 +128,7 @@ pipeline {
                     def serviceModules = modules.findAll { it != 'common-library' }
 
                     if (serviceModules.isEmpty()) {
-                        echo ">>> No service modules to check coverage — skipping"
+                        echo "Coverage gate: skip"
                     } else {
                         for (module in serviceModules) {
                             sh "ci/check-coverage.sh ${module} ${env.COVERAGE_THRESHOLD}"
@@ -167,10 +165,10 @@ pipeline {
                         def serviceModules = modules.findAll { it != 'common-library' }
 
                         if (serviceModules.isEmpty()) {
-                            echo ">>> No service modules changed — skipping SonarQube analysis"
+                            echo "SonarQube: skip"
                         } else {
                             def plArg = serviceModules.join(',')
-                            echo ">>> Running SonarQube analysis for: ${plArg}"
+                            echo "SonarQube: ${plArg}"
                             sh """
                                 mvn sonar:sonar \
                                   -pl ${plArg} -am \
@@ -197,70 +195,14 @@ pipeline {
                         def serviceModules = modules.findAll { it != 'common-library' }
 
                         if (serviceModules.isEmpty()) {
-                            echo ">>> No service modules changed — skipping Snyk scan"
+                            echo "Snyk: skip"
                         } else {
                             sh "snyk auth \$SNYK_TOKEN"
-                            sh "snyk --version || true"
                             for (mod in serviceModules) {
-                                echo ">>> Snyk scanning: ${mod}"
-                                def testExitCode = sh(
-                                    script: """
-                                        snyk test \
-                                          --file=${mod}/pom.xml \
-                                          --severity-threshold=high \
-                                          --all-sub-projects
-                                    """,
-                                    returnStatus: true
-                                )
-
-                                if (testExitCode != 0) {
-                                    echo ">>> Snyk test failed for ${mod} (exit=${testExitCode}). Retrying with reduced dependency depth..."
-                                    testExitCode = sh(
-                                        script: """
-                                            snyk test \
-                                              --file=${mod}/pom.xml \
-                                              --severity-threshold=high \
-                                              --all-sub-projects \
-                                              --max-depth=3
-                                        """,
-                                        returnStatus: true
-                                    )
-                                }
-
-                                if (testExitCode != 0) {
-                                    echo ">>> Snyk test still failed for ${mod} (exit=${testExitCode}) - continuing pipeline."
-                                } else {
-                                    echo ">>> Snyk test passed for ${mod}"
-                                }
+                                sh "snyk test --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3"
                             }
                             for (mod in serviceModules) {
-                                def monitorExitCode = sh(
-                                    script: """
-                                        snyk monitor \
-                                          --file=${mod}/pom.xml \
-                                          --project-name=yas-${mod}
-                                    """,
-                                    returnStatus: true
-                                )
-
-                                if (monitorExitCode != 0) {
-                                    echo ">>> Snyk monitor failed for ${mod} (exit=${monitorExitCode}). Retrying with reduced dependency depth..."
-                                    monitorExitCode = sh(
-                                        script: """
-                                            snyk monitor \
-                                              --file=${mod}/pom.xml \
-                                              --project-name=yas-${mod} \
-                                              --max-depth=3
-                                        """,
-                                        returnStatus: true
-                                    )
-                                }
-
-                                if (monitorExitCode != 0) {
-                                    echo ">>> Snyk monitor still failed for ${mod} (exit=${monitorExitCode}) - continuing pipeline."
-                                } else {
-                                    echo ">>> Snyk monitor pushed for ${mod}"
-                                }
+                                sh "snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} --max-depth=3"
                             }
                         }
                     }
@@ -275,23 +217,10 @@ pipeline {
             cleanWs()
         }
         success {
-            echo """
-            ╔══════════════════════════════════════╗
-            ║   ✅  PIPELINE PASSED SUCCESSFULLY   ║
-            ╚══════════════════════════════════════╝
-            Branch : ${env.BRANCH_NAME}
-            Build  : #${env.BUILD_NUMBER}
-            """
+            echo "PASS ${env.BRANCH_NAME} #${env.BUILD_NUMBER}"
         }
         failure {
-            echo """
-            ╔══════════════════════════════════════╗
-            ║   ❌  PIPELINE FAILED                ║
-            ╚══════════════════════════════════════╝
-            Branch : ${env.BRANCH_NAME}
-            Build  : #${env.BUILD_NUMBER}
-            Check console output for details.
-            """
+            echo "FAIL ${env.BRANCH_NAME} #${env.BUILD_NUMBER}"
         }
     }
 }
