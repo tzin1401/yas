@@ -3,7 +3,6 @@ package com.yas.promotion.service;
 import static com.yas.promotion.util.SecurityContextUtils.setUpSecurityContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.yas.promotion.config.ServiceUrlConfig;
@@ -16,7 +15,11 @@ import java.util.List;
 import java.util.Objects;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
@@ -24,24 +27,25 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
+@ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
 
+    @Mock
     private RestClient restClient;
 
+    @Mock
     private ServiceUrlConfig serviceUrlConfig;
 
+    @InjectMocks
     private ProductService productService;
 
+    @Mock
     private RestClient.ResponseSpec responseSpec;
 
     private static final String PRODUCT_URL = "http://api.yas.local/product";
 
     @BeforeEach
     void setUp() {
-        restClient = mock(RestClient.class);
-        serviceUrlConfig = mock(ServiceUrlConfig.class);
-        productService = new ProductService(restClient, serviceUrlConfig);
-        responseSpec = Mockito.mock(RestClient.ResponseSpec.class);
         setUpSecurityContext("test");
         when(serviceUrlConfig.product()).thenReturn(PRODUCT_URL);
     }
@@ -64,7 +68,7 @@ class ProductServiceTest {
         when(requestHeadersUriSpec.headers(any())).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
 
-        when(responseSpec.toEntity(new ParameterizedTypeReference<List<ProductVm>>() {}))
+        when(responseSpec.toEntity(any(ParameterizedTypeReference.class)))
             .thenReturn(ResponseEntity.ok(createProductVms()));
 
         List<ProductVm> result = productService.getProductByIds(ids);
@@ -99,7 +103,7 @@ class ProductServiceTest {
             0L
         );
 
-        when(responseSpec.toEntity(new ParameterizedTypeReference<List<CategoryGetVm>>() {}))
+        when(responseSpec.toEntity(any(ParameterizedTypeReference.class)))
             .thenReturn(ResponseEntity.ok(List.of(category)));
 
         List<CategoryGetVm> result = productService.getCategoryByIds(ids);
@@ -133,7 +137,7 @@ class ProductServiceTest {
             true
         );
 
-        when(responseSpec.toEntity(new ParameterizedTypeReference<List<BrandVm>>() {}))
+        when(responseSpec.toEntity(any(ParameterizedTypeReference.class)))
             .thenReturn(ResponseEntity.ok(List.of(brand)));
 
         List<BrandVm> result = productService.getBrandByIds(ids);
@@ -160,7 +164,7 @@ class ProductServiceTest {
         when(requestHeadersUriSpec.headers(any())).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
 
-        when(responseSpec.toEntity(new ParameterizedTypeReference<List<ProductVm>>() {}))
+        when(responseSpec.toEntity(any(ParameterizedTypeReference.class)))
             .thenReturn(ResponseEntity.ok(createProductVms()));
 
         List<ProductVm> result = productService.getProductByCategoryIds(ids);
@@ -187,7 +191,7 @@ class ProductServiceTest {
         when(requestHeadersUriSpec.headers(any())).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
 
-        when(responseSpec.toEntity(new ParameterizedTypeReference<List<ProductVm>>() {}))
+        when(responseSpec.toEntity(any(ParameterizedTypeReference.class)))
             .thenReturn(ResponseEntity.ok(createProductVms()));
 
         List<ProductVm> result = productService.getProductByBrandIds(ids);
