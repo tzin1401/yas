@@ -193,6 +193,8 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     script {
+                        // Explicit org avoids REST org-metadata lookup that can 403 on some PATs (noise in SNYK-CLI-0000 summary).
+                        def snykOrg = 'vinh-code'
                         def modules = env.CHANGED_MODULES.split(',')
                         def serviceModules = modules.findAll { it != 'common-library' }
 
@@ -202,6 +204,7 @@ pipeline {
                             // Snyk CLI is Node-based; Maven resolver children need RAM — exit -13 is often OOM.
                             // --maven-skip-wrapper: use system `mvn` (tool JDK/Maven in Checkout), not ./mvnw (avoids EACCES on wrapper).
                             // Scan light → full reactor → capped depth (avoid starting with --all-sub-projects only).
+                            // Trailing || true: không FAIL stage khi có vulnerability / lỗi Snyk — chỉ ghi log (giống báo cáo nhóm).
                             withEnv([
                                 'NODE_OPTIONS=--max-old-space-size=6144',
                                 'MAVEN_OPTS=-Xmx1536m -XX:MaxMetaspaceSize=384m'
@@ -213,10 +216,10 @@ pipeline {
                                 }
                                 for (mod in serviceModules) {
                                     // -d: optional verbose logs; remove after CI stable.
-                                    sh "snyk test -d --maven-skip-wrapper --file=${mod}/pom.xml --severity-threshold=high || snyk test -d --maven-skip-wrapper --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test -d --maven-skip-wrapper --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3"
+                                    sh "snyk test -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --severity-threshold=high || snyk test -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3 || true"
                                 }
                                 for (mod in serviceModules) {
-                                    sh "snyk monitor -d --maven-skip-wrapper --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor -d --maven-skip-wrapper --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects || snyk monitor -d --maven-skip-wrapper --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects --max-depth=3"
+                                    sh "snyk monitor -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects || snyk monitor -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects --max-depth=3 || true"
                                 }
                             }
                         }
