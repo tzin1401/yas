@@ -67,8 +67,7 @@ class CustomerServiceTest {
         when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
 
         CustomerVm expected = new CustomerVm("id", "user", "first", "last");
-        when(responseSpec.toEntity(any(ParameterizedTypeReference.class)))
-                .thenReturn(ResponseEntity.ok(expected));
+        when(responseSpec.body(CustomerVm.class)).thenReturn(expected);
 
         CustomerVm result = customerService.getCustomer();
 
