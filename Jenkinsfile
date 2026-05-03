@@ -264,7 +264,7 @@ pipeline {
                                 sh "snyk auth \$SNYK_TOKEN"
                                 // Same graph Snyk uses internally — fail fast if Maven cannot resolve deps (before SNYK-CLI-0000 / -13).
                                 for (mod in serviceModules) {
-                                    sh "mvn -B -ntp dependency:tree -f ${mod}/pom.xml"
+                                    sh "mvn -B -ntp dependency:tree -pl ${mod} -am"
                                 }
                                 for (mod in serviceModules) {
                                     // -d: optional verbose logs; remove after CI stable.
