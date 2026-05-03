@@ -74,4 +74,8 @@ printf '%s\n' "${selected_modules[@]}" | paste -sd ','
     \item Pipeline vẫn đảm bảo tính chính xác nhờ flag \texttt{-am} (also make dependencies)
 \end{itemize}
 
-% [Ảnh: Console output hiển thị "Modules selected for CI: media"]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/09-jenkins-console-detect-modules.png}
+    \caption{Console output hiển thị tính năng Path Filter nhận diện các module thay đổi}
+\end{figure}

@@ -3,7 +3,11 @@
 \subsection{Fork Repository}
 Nhóm đã fork repository gốc \texttt{nashtech-garage/yas} về tài khoản \texttt{tzin1401/yas}. Tất cả thành viên được thêm làm collaborator với quyền write.
 
-% [Ảnh: Screenshot GitHub repo tzin1401/yas]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/01-github-repo-home.png}
+    \caption{Giao diện repository tzin1401/yas}
+\end{figure}
 
 \subsection{Branch Protection Rules (GitHub Rulesets)}
 Để đảm bảo chất lượng code, nhóm đã cấu hình GitHub Rulesets cho branch \texttt{main} với các quy tắc:
@@ -15,8 +19,23 @@ Nhóm đã fork repository gốc \texttt{nashtech-garage/yas} về tài khoản 
     \item \textbf{Không cho phép force push}: Bảo vệ lịch sử commit
 \end{enumerate}
 
-% [Ảnh: Screenshot GitHub Rulesets configuration]
-% [Ảnh: Screenshot hiển thị "Review required" và "Checks" trên PR]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/02-github-rulesets-main1.png}
+    \caption{Cấu hình Branch Protection Rules cho nhánh main (Phần 1)}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/02-github-rulesets-main2.png}
+    \caption{Cấu hình Branch Protection Rules cho nhánh main (Phần 2)}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/06-github-pr-checks-and-merge.png}
+    \caption{Yêu cầu tối thiểu 2 approvals và CI pass trên Pull Request}
+\end{figure}
 
 \subsection{Webhook GitHub → Jenkins}
 Cấu hình webhook để GitHub tự động thông báo Jenkins khi có push hoặc PR:
@@ -26,8 +45,38 @@ Cấu hình webhook để GitHub tự động thông báo Jenkins khi có push h
     \item \textbf{Events}: Push events, Pull request events
 \end{itemize}
 
-% [Ảnh: Screenshot GitHub Webhook configuration]
-% [Ảnh: Screenshot Webhook delivery history (Recent Deliveries)]
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/03-github-webhook-list1.png}
+    \caption{Cấu hình Webhook trỏ tới Jenkins (Phần 1)}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/03-github-webhook-list2.png}
+    \caption{Cấu hình Webhook trỏ tới Jenkins (Phần 2)}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/04-github-webhook-delivery-ok.png}
+    \caption{Lịch sử gửi Webhook thành công (HTTP 200)}
+\end{figure}
+
+\subsection{Cấp quyền truy cập cho Jenkins}
+Để Jenkins có thể truy cập và quét các nhánh/PR tự động, nhóm đã khởi tạo Personal Access Token trên GitHub và cấp quyền.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/04b-github-pat.png}
+    \caption{Personal Access Token dành cho Jenkins}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/04c-jenkins-github-credentials.png}
+    \caption{Lưu trữ Token trong Jenkins Credentials}
+\end{figure}
 
 \subsection{Quy trình làm việc với Git}
 Nhóm tuân theo quy trình Git Flow đơn giản:
@@ -40,3 +89,15 @@ Nhóm tuân theo quy trình Git Flow đơn giản:
     \item 2 thành viên khác review và approve
     \item Merge PR khi CI pass và đủ approvals
 \end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/05-github-pr-list.png}
+    \caption{Danh sách các Pull Request theo quy trình}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/07-github-pr-conversation.png}
+    \caption{Quá trình trao đổi và review trên Pull Request}
+\end{figure}
