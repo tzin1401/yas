@@ -200,6 +200,7 @@ pipeline {
                             echo "Snyk: skip"
                         } else {
                             // Snyk CLI is Node-based; Maven resolver children need RAM — exit -13 is often OOM.
+                            // --maven-skip-wrapper: use system `mvn` (tool JDK/Maven in Checkout), not ./mvnw (avoids EACCES on wrapper).
                             // Scan light → full reactor → capped depth (avoid starting with --all-sub-projects only).
                             withEnv([
                                 'NODE_OPTIONS=--max-old-space-size=6144',
@@ -211,11 +212,11 @@ pipeline {
                                     sh "mvn -B -ntp dependency:tree -f ${mod}/pom.xml"
                                 }
                                 for (mod in serviceModules) {
-                                    // -d: debug logs for STDERR/STDOUT when child process dies with exit -13 (see Snyk docs).
-                                    sh "snyk test -d --file=${mod}/pom.xml --severity-threshold=high || snyk test -d --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test -d --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3"
+                                    // -d: optional verbose logs; remove after CI stable.
+                                    sh "snyk test -d --maven-skip-wrapper --file=${mod}/pom.xml --severity-threshold=high || snyk test -d --maven-skip-wrapper --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test -d --maven-skip-wrapper --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3"
                                 }
                                 for (mod in serviceModules) {
-                                    sh "snyk monitor -d --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor -d --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects || snyk monitor -d --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects --max-depth=3"
+                                    sh "snyk monitor -d --maven-skip-wrapper --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor -d --maven-skip-wrapper --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects || snyk monitor -d --maven-skip-wrapper --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects --max-depth=3"
                                 }
                             }
                         }
