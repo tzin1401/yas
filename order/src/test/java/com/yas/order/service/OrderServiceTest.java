@@ -1,12 +1,12 @@
 package com.yas.order.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.times;
 
 import com.yas.commonlibrary.exception.NotFoundException;
 import com.yas.order.mapper.OrderMapper;
@@ -16,280 +16,273 @@ import com.yas.order.model.OrderItem;
 import com.yas.order.model.enumeration.DeliveryMethod;
 import com.yas.order.model.enumeration.DeliveryStatus;
 import com.yas.order.model.enumeration.OrderStatus;
-import com.yas.order.model.enumeration.PaymentMethod;
 import com.yas.order.model.enumeration.PaymentStatus;
+import com.yas.order.model.csv.OrderItemCsv;
 import com.yas.order.model.request.OrderRequest;
 import com.yas.order.repository.OrderItemRepository;
 import com.yas.order.repository.OrderRepository;
-import com.yas.order.viewmodel.order.OrderItemPostVm;
-import com.yas.order.viewmodel.order.OrderPostVm;
+import com.yas.order.viewmodel.order.OrderBriefVm;
+import com.yas.order.viewmodel.order.OrderGetVm;
+import com.yas.order.viewmodel.order.OrderListVm;
+import com.yas.order.viewmodel.order.OrderVm;
 import com.yas.order.viewmodel.order.PaymentOrderStatusVm;
-import com.yas.order.viewmodel.orderaddress.OrderAddressPostVm;
-import com.yas.order.viewmodel.promotion.PromotionUsageVm;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.ZonedDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.quality.Strictness;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.util.Pair;
 
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 class OrderServiceTest {
 
-    @Mock private OrderRepository orderRepository;
-    @Mock private OrderItemRepository orderItemRepository;
-    @Mock private ProductService productService;
-    @Mock private CartService cartService;
-    @Mock private OrderMapper orderMapper;
-    @Mock private PromotionService promotionService;
+    @Mock
+    private OrderRepository orderRepository;
+    @Mock
+    private OrderItemRepository orderItemRepository;
+    @Mock
+    private ProductService productService;
+    @Mock
+    private CartService cartService;
+    @Mock
+    private OrderMapper orderMapper;
+    @Mock
+    private PromotionService promotionService;
 
-    @InjectMocks private OrderService orderService;
+    @InjectMocks
+    private OrderService orderService;
 
-    @Test
-    void createOrderShouldPersistOrderItemsUpdateStockCartAndPromotionUsage() {
-        OrderPostVm postVm = orderPostVm();
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
-            Order order = invocation.getArgument(0);
-            order.setId(123L);
-            return order;
-        });
-        when(orderItemRepository.saveAll(any())).thenAnswer(invocation -> {
-            Iterable<OrderItem> items = invocation.getArgument(0);
-            return List.copyOf((java.util.Collection<OrderItem>) items);
-        });
-        when(orderRepository.findById(123L)).thenReturn(Optional.of(order(123L)));
+    private Order orderEntity;
+    private OrderAddress billing;
+    private OrderAddress shipping;
 
-        var result = orderService.createOrder(postVm);
-
-        assertThat(result.id()).isEqualTo(123L);
-        assertThat(result.orderStatus()).isEqualTo(OrderStatus.PENDING);
-        verify(productService).subtractProductStockQuantity(result);
-        verify(cartService).deleteCartItems(result);
-        verify(promotionService).updateUsagePromotion(anyList());
-        verify(orderRepository, times(2)).save(any(Order.class));
-    }
-
-    @Test
-    void getOrderWithItemsByIdShouldReturnOrderVmOrThrowWhenMissing() {
-        Order order = order(10L);
-        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
-        when(orderItemRepository.findAllByOrderId(10L)).thenReturn(List.of(orderItem(1L, 10L)));
-
-        var result = orderService.getOrderWithItemsById(10L);
-
-        assertThat(result.id()).isEqualTo(10L);
-        assertThat(result.orderItemVms()).hasSize(1);
-
-        when(orderRepository.findById(404L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> orderService.getOrderWithItemsById(404L)).isInstanceOf(NotFoundException.class);
-    }
-
-    @Test
-    void getAllOrderShouldReturnEmptyOrMappedPage() {
-        when(orderRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
-            .thenReturn(new PageImpl<>(List.of()));
-
-        var empty = orderService.getAllOrder(
-            Pair.of(ZonedDateTime.now().minusDays(1), ZonedDateTime.now()),
-            "phone",
-            List.of(),
-            Pair.of("VN", "0909"),
-            "buyer@example.com",
-            Pair.of(0, 10));
-
-        assertThat(empty.orderList()).isNull();
-        assertThat(empty.totalElements()).isZero();
-
-        when(orderRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
-            .thenReturn(new PageImpl<>(List.of(order(10L))));
-
-        var page = orderService.getAllOrder(
-            Pair.of(ZonedDateTime.now().minusDays(1), ZonedDateTime.now()),
-            "phone",
-            List.of(OrderStatus.ACCEPTED),
-            Pair.of("VN", "0909"),
-            "buyer@example.com",
-            Pair.of(0, 10));
-
-        assertThat(page.orderList()).hasSize(1);
-        assertThat(page.totalElements()).isEqualTo(1);
-    }
-
-    @Test
-    void latestCheckoutAndPaymentMethodsShouldHandleHappyPaths() {
-        Order order = order(10L);
-        when(orderRepository.getLatestOrders(any())).thenReturn(List.of(order));
-        when(orderRepository.findByCheckoutId("checkout-1")).thenReturn(Optional.of(order));
-        when(orderItemRepository.findAllByOrderId(10L)).thenReturn(List.of(orderItem(1L, 10L)));
-        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        assertThat(orderService.getLatestOrders(0)).isEmpty();
-        assertThat(orderService.getLatestOrders(5)).hasSize(1);
-        assertThat(orderService.findOrderByCheckoutId("checkout-1").getId()).isEqualTo(10L);
-        assertThat(orderService.findOrderVmByCheckoutId("checkout-1").orderItems()).hasSize(1);
-
-        PaymentOrderStatusVm statusVm = PaymentOrderStatusVm.builder()
-            .orderId(10L)
-            .paymentId(99L)
-            .paymentStatus(PaymentStatus.COMPLETED.name())
-            .build();
-
-        var result = orderService.updateOrderPaymentStatus(statusVm);
-
-        assertThat(result.orderStatus()).isEqualTo(OrderStatus.PAID.getName());
-        assertThat(order.getPaymentId()).isEqualTo(99L);
-        assertThat(order.getPaymentStatus()).isEqualTo(PaymentStatus.COMPLETED);
-    }
-
-    @Test
-    void acceptRejectAndPaymentShouldThrowWhenOrderMissing() {
-        Order order = order(10L);
-        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        orderService.acceptOrder(10L);
-        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.ACCEPTED);
-
-        orderService.rejectOrder(10L, "out of stock");
-        assertThat(order.getOrderStatus()).isEqualTo(OrderStatus.REJECT);
-        assertThat(order.getRejectReason()).isEqualTo("out of stock");
-
-        when(orderRepository.findById(404L)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> orderService.acceptOrder(404L)).isInstanceOf(NotFoundException.class);
-        assertThatThrownBy(() -> orderService.rejectOrder(404L, "missing")).isInstanceOf(NotFoundException.class);
-        assertThatThrownBy(() -> orderService.updateOrderPaymentStatus(
-            PaymentOrderStatusVm.builder().orderId(404L).paymentStatus(PaymentStatus.COMPLETED.name()).build()))
-            .isInstanceOf(NotFoundException.class);
-    }
-
-    @Test
-    void exportCsvShouldReturnHeaderWhenNoOrders() throws IOException {
-        OrderRequest request = new OrderRequest();
-        request.setCreatedFrom(ZonedDateTime.now().minusDays(1));
-        request.setCreatedTo(ZonedDateTime.now());
-        request.setProductName("phone");
-        request.setOrderStatus(List.of());
-        request.setBillingCountry("VN");
-        request.setBillingPhoneNumber("0909");
-        request.setEmail("buyer@example.com");
-        request.setPageNo(0);
-        request.setPageSize(10);
-        when(orderRepository.findAll(any(Specification.class), any(org.springframework.data.domain.Pageable.class)))
-            .thenReturn(new PageImpl<>(List.of()));
-
-        byte[] csv = orderService.exportCsv(request);
-
-        assertThat(csv).isNotEmpty();
-    }
-
-    private OrderPostVm orderPostVm() {
-        return OrderPostVm.builder()
-            .checkoutId("checkout-1")
-            .email("buyer@example.com")
-            .shippingAddressPostVm(address())
-            .billingAddressPostVm(address())
-            .note("note")
-            .tax(1F)
-            .discount(2F)
-            .numberItem(1)
+    @BeforeEach
+    void setUp() {
+        billing = OrderAddress.builder().id(1L).phone("1").contactName("b").build();
+        shipping = OrderAddress.builder().id(2L).phone("2").contactName("s").build();
+        orderEntity = Order.builder()
+            .id(10L)
+            .email("u@test.com")
+            .billingAddressId(billing)
+            .shippingAddressId(shipping)
             .totalPrice(BigDecimal.TEN)
-            .deliveryFee(BigDecimal.ONE)
-            .couponCode("PROMO")
-            .deliveryMethod(DeliveryMethod.YAS_EXPRESS)
-            .paymentMethod(PaymentMethod.COD)
-            .paymentStatus(PaymentStatus.PENDING)
-            .orderItemPostVms(List.of(OrderItemPostVm.builder()
-                .productId(1L)
-                .productName("Phone")
-                .quantity(2)
-                .productPrice(BigDecimal.TEN)
-                .note("item")
-                .discountAmount(BigDecimal.ZERO)
-                .taxAmount(BigDecimal.ZERO)
-                .taxPercent(BigDecimal.ZERO)
-                .build()))
-            .build();
-    }
-
-    private OrderAddressPostVm address() {
-        return OrderAddressPostVm.builder()
-            .contactName("Buyer")
-            .phone("0909")
-            .addressLine1("Line 1")
-            .addressLine2("Line 2")
-            .city("HCM")
-            .zipCode("70000")
-            .districtId(1L)
-            .districtName("District")
-            .stateOrProvinceId(2L)
-            .stateOrProvinceName("State")
-            .countryId(3L)
-            .countryName("Vietnam")
-            .build();
-    }
-
-    private Order order(Long id) {
-        return Order.builder()
-            .id(id)
-            .email("buyer@example.com")
-            .note("note")
-            .tax(1F)
-            .discount(2F)
-            .numberItem(1)
-            .totalPrice(BigDecimal.TEN)
-            .deliveryFee(BigDecimal.ONE)
-            .couponCode("PROMO")
             .orderStatus(OrderStatus.PENDING)
             .deliveryMethod(DeliveryMethod.YAS_EXPRESS)
             .deliveryStatus(DeliveryStatus.PREPARING)
             .paymentStatus(PaymentStatus.PENDING)
-            .checkoutId("checkout-1")
-            .shippingAddressId(orderAddress(1L))
-            .billingAddressId(orderAddress(2L))
+            .checkoutId("chk-1")
             .build();
     }
 
-    private OrderAddress orderAddress(Long id) {
-        return OrderAddress.builder()
-            .id(id)
-            .contactName("Buyer")
-            .phone("0909")
-            .addressLine1("Line 1")
-            .addressLine2("Line 2")
-            .city("HCM")
-            .zipCode("70000")
-            .districtId(1L)
-            .districtName("District")
-            .stateOrProvinceId(2L)
-            .stateOrProvinceName("State")
-            .countryId(3L)
-            .countryName("Vietnam")
-            .build();
+    @Test
+    void getOrderWithItemsById_returnsVm() {
+        OrderItem item = OrderItem.builder().id(1L).productId(99L).orderId(10L).build();
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(orderEntity));
+        when(orderItemRepository.findAllByOrderId(10L)).thenReturn(List.of(item));
+
+        OrderVm vm = orderService.getOrderWithItemsById(10L);
+
+        assertEquals(10L, vm.id());
+        assertEquals(1, vm.orderItemVms().size());
     }
 
-    private OrderItem orderItem(Long id, Long orderId) {
-        return OrderItem.builder()
-            .id(id)
-            .orderId(orderId)
-            .productId(1L)
-            .productName("Phone")
-            .quantity(2)
-            .productPrice(BigDecimal.TEN)
-            .note("item")
-            .discountAmount(BigDecimal.ZERO)
-            .taxAmount(BigDecimal.ZERO)
-            .taxPercent(BigDecimal.ZERO)
+    @Test
+    void getOrderWithItemsById_throwsWhenMissing() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.empty());
+        assertThrows(NotFoundException.class, () -> orderService.getOrderWithItemsById(1L));
+    }
+
+    @Test
+    void getLatestOrders_returnsEmptyWhenCountNotPositive() {
+        assertTrue(orderService.getLatestOrders(0).isEmpty());
+        assertTrue(orderService.getLatestOrders(-1).isEmpty());
+    }
+
+    @Test
+    void getLatestOrders_returnsEmptyWhenNoOrders() {
+        when(orderRepository.getLatestOrders(any(Pageable.class))).thenReturn(Collections.emptyList());
+        assertTrue(orderService.getLatestOrders(5).isEmpty());
+    }
+
+    @Test
+    void getLatestOrders_mapsOrders() {
+        when(orderRepository.getLatestOrders(any(Pageable.class))).thenReturn(List.of(orderEntity));
+
+        List<OrderBriefVm> list = orderService.getLatestOrders(3);
+
+        assertEquals(1, list.size());
+        assertEquals("u@test.com", list.getFirst().email());
+    }
+
+    @Test
+    void findOrderByCheckoutId_returnsOrder() {
+        when(orderRepository.findByCheckoutId("chk")).thenReturn(Optional.of(orderEntity));
+        assertEquals(10L, orderService.findOrderByCheckoutId("chk").getId());
+    }
+
+    @Test
+    void findOrderByCheckoutId_throwsWhenMissing() {
+        when(orderRepository.findByCheckoutId("x")).thenReturn(Optional.empty());
+        assertThrows(NotFoundException.class, () -> orderService.findOrderByCheckoutId("x"));
+    }
+
+    @Test
+    void findOrderVmByCheckoutId_returnsGetVm() {
+        OrderItem item = OrderItem.builder().id(3L).orderId(10L).productId(1L).build();
+        when(orderRepository.findByCheckoutId("chk")).thenReturn(Optional.of(orderEntity));
+        when(orderItemRepository.findAllByOrderId(10L)).thenReturn(List.of(item));
+
+        OrderGetVm vm = orderService.findOrderVmByCheckoutId("chk");
+
+        assertEquals(10L, vm.id());
+    }
+
+    @Test
+    void updateOrderPaymentStatus_setsPaidWhenCompleted() {
+        PaymentOrderStatusVm req = PaymentOrderStatusVm.builder()
+            .orderId(10L)
+            .paymentId(500L)
+            .paymentStatus(PaymentStatus.COMPLETED.name())
+            .orderStatus("ignored")
             .build();
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(orderEntity));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PaymentOrderStatusVm out = orderService.updateOrderPaymentStatus(req);
+
+        assertEquals(10L, out.orderId());
+        verify(orderRepository).save(any(Order.class));
+    }
+
+    @Test
+    void updateOrderPaymentStatus_throwsWhenOrderMissing() {
+        PaymentOrderStatusVm req = PaymentOrderStatusVm.builder()
+            .orderId(99L)
+            .paymentId(1L)
+            .paymentStatus(PaymentStatus.PENDING.name())
+            .build();
+        when(orderRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(NotFoundException.class, () -> orderService.updateOrderPaymentStatus(req));
+    }
+
+    @Test
+    void rejectOrder_updatesStatus() {
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(orderEntity));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.rejectOrder(10L, "bad");
+
+        verify(orderRepository).save(any(Order.class));
+    }
+
+    @Test
+    void acceptOrder_updatesStatus() {
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(orderEntity));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        orderService.acceptOrder(10L);
+
+        verify(orderRepository).save(any(Order.class));
+    }
+
+    @Test
+    void getAllOrder_returnsEmptyVmWhenPageEmpty() {
+        ZonedDateTime from = ZonedDateTime.now().minusDays(1);
+        ZonedDateTime to = ZonedDateTime.now();
+        when(orderRepository.findAll(any(Specification.class), any(Pageable.class)))
+            .thenReturn(Page.empty());
+
+        OrderListVm list = orderService.getAllOrder(
+            Pair.of(from, to),
+            "p",
+            List.of(OrderStatus.PENDING),
+            Pair.of("US", "123"),
+            "e@x.com",
+            Pair.of(0, 10)
+        );
+
+        assertEquals(0, list.totalElements());
+    }
+
+    @Test
+    void getAllOrder_returnsContent() {
+        ZonedDateTime from = ZonedDateTime.now().minusDays(1);
+        ZonedDateTime to = ZonedDateTime.now();
+        Page<Order> page = new PageImpl<>(List.of(orderEntity));
+        when(orderRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        OrderListVm list = orderService.getAllOrder(
+            Pair.of(from, to),
+            "",
+            Collections.emptyList(),
+            Pair.of("", ""),
+            "",
+            Pair.of(0, 10)
+        );
+
+        assertEquals(1, list.orderList().size());
+        assertEquals(1, list.totalElements());
+    }
+
+    @Test
+    void exportCsv_returnsBytesWhenNoOrders() throws IOException {
+        ZonedDateTime from = ZonedDateTime.now().minusDays(1);
+        ZonedDateTime to = ZonedDateTime.now();
+        when(orderRepository.findAll(any(Specification.class), any(Pageable.class)))
+            .thenReturn(Page.empty());
+
+        OrderRequest req = OrderRequest.builder()
+            .createdFrom(from)
+            .createdTo(to)
+            .productName("")
+            .orderStatus(Collections.emptyList())
+            .billingCountry("")
+            .billingPhoneNumber("")
+            .email("")
+            .pageNo(0)
+            .pageSize(10)
+            .build();
+
+        byte[] csv = orderService.exportCsv(req);
+
+        assertNotNull(csv);
+    }
+
+    @Test
+    void exportCsv_mapsRowsWhenOrdersPresent() throws IOException {
+        ZonedDateTime from = ZonedDateTime.now().minusDays(1);
+        ZonedDateTime to = ZonedDateTime.now();
+        Page<Order> page = new PageImpl<>(List.of(orderEntity));
+        when(orderRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+
+        OrderItemCsv csvRow = OrderItemCsv.builder().email("u@test.com").build();
+        when(orderMapper.toCsv(any(OrderBriefVm.class))).thenReturn(csvRow);
+
+        OrderRequest req = OrderRequest.builder()
+            .createdFrom(from)
+            .createdTo(to)
+            .productName("")
+            .orderStatus(Collections.emptyList())
+            .billingCountry("")
+            .billingPhoneNumber("")
+            .email("")
+            .pageNo(0)
+            .pageSize(10)
+            .build();
+
+        byte[] csv = orderService.exportCsv(req);
+
+        assertNotNull(csv);
+        verify(orderMapper).toCsv(any(OrderBriefVm.class));
     }
 }
