@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Coverage gate: LINE aggregate (last counter block in JaCoCo XML per module).
-# Pass when coverage >= COVERAGE_THRESHOLD from Jenkins (default 70). Floating output may show 69.99 — tune tests, not the gate.
 set -euo pipefail
 
 if [[ $# -lt 2 ]]; then

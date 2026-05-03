@@ -127,12 +127,10 @@ pipeline {
                         // Khai báo đường dẫn để hiển thị mã nguồn (fix lỗi Source file not found)
                         sourceDirectories: [
                             [path: 'common-library/src/main/java'],
-                            [path: 'backoffice-bff/src/main/java'],
-                            [path: 'storefront-bff/src/main/java'],
                             [path: 'payment/src/main/java'],
-                            [path: 'payment-paypal/src/main/java'],
                             [path: 'media/src/main/java'],
                             [path: 'cart/src/main/java'],
+                            [path: 'catalog/src/main/java'],
                             [path: 'customer/src/main/java'],
                             [path: 'inventory/src/main/java'],
                             [path: 'location/src/main/java'],
@@ -141,11 +139,7 @@ pipeline {
                             [path: 'promotion/src/main/java'],
                             [path: 'rating/src/main/java'],
                             [path: 'search/src/main/java'],
-                            [path: 'tax/src/main/java'],
-                            [path: 'webhook/src/main/java'],
-                            [path: 'delivery/src/main/java'],
-                            [path: 'recommendation/src/main/java'],
-                            [path: 'sampledata/src/main/java']
+                            [path: 'tax/src/main/java']
                         ]
                     )
                 }
