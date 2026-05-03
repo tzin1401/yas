@@ -57,6 +57,12 @@ Chi tiết kỹ thuật: `docs/bao-cao/CI-PIPELINE-NOI-DUNG-BAO-CAO.md`.
 - Một ảnh (nếu có): **Recent Deliveries** — một delivery **thành công** (✓, HTTP 200).
 - **Tên file:** `03-github-webhook-list.png`, `04-github-webhook-delivery-ok.png`
 
+### 1.4 GitHub Token kết nối với Jenkins (Mới bổ sung cho task A3)
+
+- **Settings (của tài khoản cá nhân)** → **Developer Settings** → **Personal Access Tokens** (hoặc GitHub Apps nếu nhóm dùng App).
+- Chụp danh sách thấy có token được tạo riêng cho Jenkins (không để lộ nội dung token). Đây là minh chứng cho việc lấy token cấp quyền cho Jenkins quét repo.
+- **Tên file:** `04b-github-developer-token.png`
+
 ---
 
 ## 2. Pull Request — quy trình nhóm
