@@ -4,7 +4,7 @@ Tài liệu này tóm tắt **trạng thái pipeline đã triển khai** trên J
 
 ## 1. Mục tiêu và bối cảnh
 
-- **Monorepo** YAS: nhiều microservice trong một repo; CI chỉ cần build/test phần **đã thay đổi** so với `origin/main`.
+- **Monorepo** YAS: nhiều microservice trong một repo; CI cố gắng chỉ build/test các module **liên quan thay đổi**. Cách chọn module nằm ở `ci/detect-changed-modules.sh` (không phải lúc nào cũng diff với `origin/main` — xem mục 6).
 - **Jenkins** (AWS): job multibranch đọc `Jenkinsfile`; **JDK 25**, **Maven** cấu hình trong *Global Tool Configuration*.
 - **SonarQube** tự host (không dùng SonarCloud trong pipeline lớp trình): phân tích mã + chỉ số coverage từ JaCoCo XML.
 - **Snyk**: quét phụ thuộc (Maven `pom.xml`); lỗi quét **không làm fail toàn bộ pipeline** (ghi log, tiếp tục).
@@ -49,3 +49,38 @@ Tài liệu này tóm tắt **trạng thái pipeline đã triển khai** trên J
 ## 5. Khác với tài liệu `docs/README.md` gốc upstream
 
 File `docs/README.md` mô tả **GitHub Actions** + SonarCloud của repo public `nashtech-garage/yas`. Báo cáo đồ án của nhóm nên làm rõ: pipeline thực tế triển khai là **Jenkins + SonarQube server + script monorepo**, không nhầm với workflow GitHub Actions trong README upstream.
+
+---
+
+## 6. Đối chiếu kỹ với mã nguồn (tránh ghi sai trong báo cáo)
+
+### 6.1 Từ **agent** trong Jenkins (không phải “AI agent”)
+
+Trong `Jenkinsfile`, dòng `agent any` là **cú pháp Jenkins Declarative Pipeline**: nghĩa là “chạy build trên **bất kỳ executor/node** nào Jenkins gán được”. Đây **không** liên quan tới việc tạo agent AI, Cursor Agent hay bot.
+
+### 6.2 `ci/detect-changed-modules.sh` — mốc so sánh thực tế
+
+Script **không nhận tham số** từ `Jenkinsfile`. Logic chọn `base_ref`:
+
+| Tình huống | Mốc diff |
+|------------|----------|
+| Build PR (Jenkins có `CHANGE_TARGET`, ví dụ `main`) | `origin/<CHANGE_TARGET>` |
+| Build nhánh thường, có commit cha | `HEAD~1` (so với commit trước trên cùng nhánh) |
+| Repo chỉ 1 commit | Toàn bộ danh sách module |
+| Đổi `pom.xml`, `.github/`, `common-library/`, `docker/`, … | **Full** tất cả module |
+
+Comment trong `Jenkinsfile` có đoạn “fetch origin main” để shallow clone đủ ref; **không** đồng nghĩa mọi build đều diff với `main`.
+
+### 6.3 Những thứ **không có** trong `Jenkinsfile` hiện tại
+
+Đối chiếu file pipeline trong repo: **không** thấy các bước sau — **không nên** viết vào báo cáo như đã triển khai nếu chỉ dựa trên repo này:
+
+- Stage **`waitForQualityGate`** / plugin Quality Gate sau Sonar
+- **`withSonarQubeEnv(...)`** — chỉ dùng `withCredentials` + `mvn sonar:sonar` + `-Dsonar.host.url` / token
+- **`recordCoverage`** (Coverage Plugin Jenkins) — test chỉ dùng `junit` + archive `jacoco.xml`; gate coverage bằng **`ci/check-coverage.sh`**
+- **`chmod +x mvnw`** hoặc **`--maven-skip-wrapper`** trong Snyk (pipeline gọi `snyk` với `--file=<module>/pom.xml`)
+- File **`ci/verify-ci-tools.sh`** — không tồn tại trong workspace repo hiện tại
+
+### 6.4 JaCoCo “prepare-agent” trong `pom.xml`
+
+Goal Maven **`jacoco:prepare-agent`** (từ plugin JaCoCo) là **bytecode instrumentation** khi chạy test — khác hẳn Jenkins `agent`. Trong báo cáo nên phân biệt hai khái niệm này nếu có đề cập.

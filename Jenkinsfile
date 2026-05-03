@@ -7,7 +7,7 @@
 //
 //  Pipeline flow:
 //  1. Checkout + fetch origin/main (fix shallow clone)
-//  2. Detect Changed Modules (shell script, so sánh với origin/main)
+//  2. Detect Changed Modules (ci/detect-changed-modules.sh — PR: origin/$CHANGE_TARGET; branch: HEAD~1)
 //  3. Gitleaks – Secret Scan (luôn chạy, fail nếu phát hiện secret)
 //  4. Test + JaCoCo report (chỉ modules thay đổi, skip Integration Tests)
 //  5. Coverage Gate (≥ 70%, graceful skip nếu không có code)
