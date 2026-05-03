@@ -48,6 +48,13 @@ fi
 
 changed_files="$(git diff --name-only "${base_ref}"...HEAD || true)"
 
+# Only Jenkinsfile and/or ci/* changed → CI-only; avoid rebuilding every module (Coverage Gate on all services).
+if [[ -n "${changed_files}" ]] \
+  && ! grep -Ev '^(Jenkinsfile|ci/)' <<< "${changed_files}" | grep -q .; then
+  printf '%s\n' "common-library" | paste -sd ','
+  exit 0
+fi
+
 # If shared build or root files change, rebuild all modules.
 if [[ -z "${changed_files}" ]] \
   || grep -Eq '^(pom\.xml|\.github/|checkstyle/|common-library/|docker/|k8s/|scripts/)' <<< "${changed_files}"; then
