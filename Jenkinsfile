@@ -116,8 +116,11 @@ pipeline {
                 always {
                     junit allowEmptyResults: true,
                           testResults: '**/target/surefire-reports/*.xml,**/target/failsafe-reports/*.xml'
-                    archiveArtifacts allowEmptyArchive: true,
-                                     artifacts: '**/target/site/jacoco/jacoco.xml'
+                    recordCoverage(
+                        tools: [[parser: 'JACOCO', pattern: '**/target/site/jacoco/jacoco.xml']],
+                        id: 'jacoco',
+                        name: 'JaCoCo Coverage'
+                    )
                 }
             }
         }
