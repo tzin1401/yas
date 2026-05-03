@@ -1,99 +1,133 @@
-# Hướng dẫn chụp ảnh - Vinh.PQ (Infra & Security)
+# Hướng dẫn chụp ảnh — Vinh.PQ (Infra, Jenkins, SonarQube, Snyk)
 
-> Chụp xong đặt ảnh vào thư mục `screenshots/vinh-pq/` đặt tên theo số thứ tự.
+## Quy ước chung
 
----
+| Mục | Chi tiết |
+|-----|----------|
+| **Thư mục lưu ảnh** | `docs/bao-cao/screenshots/vinh-pq/` |
+| **Định dạng** | PNG; che mọi secret |
+| **Jenkins URL** | Ví dụ `http://3.27.92.213:8080` — đổi nếu server nhóm khác |
+| **SonarQube URL** | Ví dụ `http://3.27.92.213:9000` — đổi nếu khác |
 
-## 1. Jenkins Dashboard
-
-### 1.1 Trang chủ Jenkins
-- Vào http://3.27.92.213:8080
-- Chụp full trang dashboard (thấy job `yas-ci-pipeline`)
-- **Tên file**: `01-jenkins-dashboard.png`
-
-### 1.2 Multibranch Pipeline - Branches tab
-- Vào `yas-ci-pipeline` → tab Branches
-- Chụp full (thấy danh sách branches: main, ci/setup-jenkins-pipeline, ...)
-- **Tên file**: `02-jenkins-branches.png`
-
-### 1.3 Multibranch Pipeline - Pull Requests tab
-- Vào `yas-ci-pipeline` → tab Pull Requests (hoặc Change Requests)
-- Chụp full (thấy PR-6, PR-7, ...)
-- **Tên file**: `03-jenkins-prs.png`
+**Credential:** trong ảnh chỉ được phần **ID** (vd: `sonarqube-token`), **không** hiển thị giá trị token/password.
 
 ---
 
-## 2. Jenkins Configuration
+## Pipeline — 8 stage (đúng `Jenkinsfile`)
 
-### 2.1 Multibranch Pipeline Config - Branch Sources
-- Vào `yas-ci-pipeline` → Configure
-- Chụp phần "Branch Sources" (thấy GitHub repo URL, discover branches strategy, discover PRs)
-- **Tên file**: `04-jenkins-branch-sources.png`
+Trên **Stage View** / Blue Ocean, thứ tự kỳ vọng:
 
-### 2.2 Multibranch Pipeline Config - Build Configuration
-- Cùng trang Configure
-- Chụp phần "Build Configuration" (thấy "by Jenkinsfile", Script Path)
-- **Tên file**: `05-jenkins-build-config.png`
+| # | Tên stage (Jenkinsfile) |
+|---|-------------------------|
+| 1 | Checkout |
+| 2 | Detect Changed Modules |
+| 3 | Gitleaks – Secret Scan |
+| 4 | Test |
+| 5 | Coverage Gate |
+| 6 | Build |
+| 7 | SonarQube – Analysis |
+| 8 | Snyk – Dependency Scan |
 
-### 2.3 Global Tool Configuration - JDK
-- Vào Manage Jenkins → Tools
-- Chụp phần JDK installations (thấy JDK-25)
-- **Tên file**: `06-jenkins-jdk.png`
+*(Tên có thể hơi cắt ngắn trên UI — đối chiếu thứ tự và màu xanh/đỏ.)*
 
-### 2.4 Global Tool Configuration - Maven
-- Cùng trang Tools
-- Chụp phần Maven installations (thấy Maven)
-- **Tên file**: `07-jenkins-maven.png`
+---
 
-### 2.5 Credentials
-- Vào Manage Jenkins → Credentials
-- Chụp danh sách credentials (thấy `sonarqube-token`, `snyk-token`)
-- ⚠️ KHÔNG hiển thị giá trị token
-- **Tên file**: `08-jenkins-credentials.png`
+## 1. Jenkins — Dashboard & multibranch
+
+### 1.1 Dashboard
+
+- Đăng nhập Jenkins → trang chủ.
+- Chụp **full** — thấy job multibranch (vd: `yas-ci-pipeline`).
+- **Tên file:** `01-jenkins-dashboard.png`
+
+### 1.2 Tab Branches
+
+- Vào job → tab **Branches**.
+- Chụp danh sách nhánh có build (`main`, nhánh feature, …).
+- **Tên file:** `02-jenkins-multibranch-branches.png`
+
+### 1.3 Tab Pull Requests
+
+- Cùng job → tab **Pull Requests** (hoặc tên tương đương).
+- Chụp danh sách PR đã discover (PR-1, PR-2, …).
+- **Tên file:** `03-jenkins-multibranch-prs.png`
+
+---
+
+## 2. Jenkins — Cấu hình job & công cụ
+
+### 2.1 Branch Sources
+
+- Job → **Configure** → phần **Branch Sources** (GitHub: repo, discover branches, discover PRs).
+- **Tên file:** `04-jenkins-config-branch-sources.png`
+
+### 2.2 Build Configuration
+
+- Cùng trang Configure → **Build Configuration**: mode **by Jenkinsfile**, **Script Path** = `Jenkinsfile` (root).
+- **Tên file:** `05-jenkins-config-jenkinsfile-path.png`
+
+### 2.3 JDK (Global Tool)
+
+- **Manage Jenkins** → **Tools** → JDK installations — thấy tên tool khớp pipeline (vd: **JDK-25**).
+- **Tên file:** `06-jenkins-tools-jdk.png`
+
+### 2.4 Maven (Global Tool)
+
+- Cùng **Tools** → Maven installations — thấy tên khớp `tools { maven '...' }` (vd: **Maven**).
+- **Tên file:** `07-jenkins-tools-maven.png`
+
+### 2.5 Credentials (chỉ danh sách ID)
+
+- **Manage Jenkins** → **Credentials** → domain phù hợp.
+- Chụp danh sách: thấy ID **`sonarqube-token`**, **`snyk-token`** (không mở chi tiết chứa secret).
+- **Tên file:** `08-jenkins-credentials-ids.png`
 
 ---
 
 ## 3. SonarQube
 
-### 3.1 SonarQube Dashboard
-- Vào http://3.27.92.213:9000
-- Chụp trang Projects (thấy project YAS)
-- **Tên file**: `09-sonarqube-projects.png`
+### 3.1 Danh sách project
 
-### 3.2 SonarQube Project Detail
-- Click vào project YAS
-- Chụp trang overview (thấy: Bugs, Vulnerabilities, Code Smells, Coverage %, Duplications)
-- **Tên file**: `10-sonarqube-detail.png`
+- Mở SonarQube → trang **Projects** — thấy project phân tích YAS (tên đúng instance nhóm).
+- **Tên file:** `09-sonarqube-projects.png`
 
-### 3.3 Console output - SonarQube
-- Vào Jenkins → build đã chạy stage SonarQube → Console Output
-- Tìm (Ctrl+F): `ANALYSIS SUCCESSFUL` hoặc log `mvn sonar:sonar` / `BUILD SUCCESS` sau phân tích
-- Chụp đoạn console thấy kết quả phân tích SonarQube
-- **Tên file**: `11-sonarqube-console.png`
+### 3.2 Overview project
 
----
+- Vào project → **Overview**: Bugs, Vulnerabilities, Code Smells, Coverage, Duplications (tùy layout phiên bản).
+- **Tên file:** `10-sonarqube-project-overview.png`
 
-## 4. Snyk
+### 3.3 Console Jenkins — stage SonarQube – Analysis
 
-### 4.1 Console output - Snyk
-- Cùng Console Output
-- Tìm: `Snyk scanning`
-- Chụp đoạn console thấy Snyk test + monitor output
-- **Tên file**: `12-snyk-console.png`
+- Build đã chạy Sonar → **Console Output**.
+- Ctrl+F: `sonar:sonar` và/hoặc `BUILD SUCCESS` ngay sau bước Sonar; có thể có `ANALYSIS SUCCESSFUL` tùy phiên bản scanner.
+- **Tên file:** `11-jenkins-console-sonarqube.png`
 
 ---
 
-## 5. Pipeline Stage View
+## 4. Snyk — Console
 
-### 5.1 Stage View - build thành công
-- Vào Jenkins → `yas-ci-pipeline` → branch/PR có build gần nhất → chọn build thành công
-- Chụp trang Stages (thấy đủ các stage: Checkout → Detect → Gitleaks → Test → Coverage Gate → Build → SonarQube → Snyk — **8 stage**)
-- **Tên file**: `13-pipeline-stages-pass.png`
-
-### 5.2 Stage View - build thất bại (nếu có)
-- Nếu có build nào fail, chụp trang Stages đó
-- **Tên file**: `14-pipeline-stages-fail.png` (optional)
+- **Cùng** hoặc build khác có stage **Snyk – Dependency Scan**.
+- Ctrl+F: `Snyk scanning` hoặc `>>> Snyk scanning`.
+- Chụp đoạn có `snyk test` / `snyk monitor` và exit message (pipeline có thể **tiếp tục** dù Snyk báo lỗi — đúng thiết kế `returnStatus` trong `Jenkinsfile`).
+- **Tên file:** `12-jenkins-console-snyk.png`
 
 ---
 
-## Tổng: ~14 ảnh
+## 5. Stage View — toàn pipeline
+
+### 5.1 Build thành công
+
+- Job → branch/PR → một build **xanh** end-to-end (hoặc xanh đến stage cuối nhóm cần minh chứng).
+- Chụp **Stage View** — thấy đủ **8 stage** theo bảng mục đầu file.
+- **Tên file:** `13-jenkins-stage-view-success.png`
+
+### 5.2 Build thất bại (tùy chọn)
+
+- Nếu có build đỏ minh chứng nguyên nhân (vd: Coverage Gate, Gitleaks) — chụp Stage View đỏ.
+- **Tên file:** `14-jenkins-stage-view-failure.png` *(optional)*
+
+---
+
+## Tổng số ảnh
+
+**~14 file** (`01` … `14`), trong đó `14` là tuỳ chọn.

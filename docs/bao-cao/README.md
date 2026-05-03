@@ -20,9 +20,9 @@ Nhánh này dùng **chỉ cho nội dung báo cáo** (Markdown/LaTeX, ảnh minh
 
 ## Gợi ý phân công (đã có hướng dẫn chụp ảnh)
 
-- `docs/screenshots-guide-vinh-nl.md` — Leader / Jenkins, PR, GitHub
-- `docs/screenshots-guide-vinh-pq.md` — Infra, SonarQube, Snyk, credentials
-- `docs/screenshots-guide-tri.md` — Unit test, coverage
+- `docs/screenshots-guide-vinh-nl.md` — Leader: GitHub (rulesets, webhook), PR, log Jenkins tối thiểu (Gitleaks / Detect / Coverage Gate)
+- `docs/screenshots-guide-vinh-pq.md` — Infra: Jenkins (dashboard, cấu hình, tools, credentials), SonarQube UI, Snyk + console, Stage View đủ 8 stage
+- `docs/screenshots-guide-tri.md` — Testing: PR + mã test, Jenkins Test Result, `Tests run:`, JaCoCo, Coverage Gate (`line coverage:`)
 
 Chụp xong đặt ảnh vào `docs/bao-cao/screenshots/<tên-thành-viên>/` đúng tên file trong từng guide.
 
