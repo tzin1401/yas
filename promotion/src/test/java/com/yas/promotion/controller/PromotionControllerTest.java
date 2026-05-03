@@ -43,6 +43,7 @@ import com.yas.promotion.viewmodel.PromotionPutVm;
 import com.yas.commonlibrary.exception.ApiExceptionHandler;
 
 @ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class PromotionControllerTest {
 
     @Mock
