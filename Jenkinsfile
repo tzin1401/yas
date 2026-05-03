@@ -118,7 +118,7 @@ pipeline {
                     junit allowEmptyResults: true,
                           testResults: '**/target/surefire-reports/*.xml,**/target/failsafe-reports/*.xml'
 
-                    // 2. Cấu hình JaCoCo: Nếu không đạt 70% sẽ đánh dấu bản Build là FAILURE (Đỏ)
+                    // 2. JaCoCo: biểu đồ / source painting trên UI — không qualityGates ở đây (gate 70% ở stage Coverage Gate + ci/check-coverage.sh).
                     recordCoverage(
                         tools: [[parser: 'JACOCO', pattern: '**/target/site/jacoco/jacoco.xml']],
                         id: 'jacoco',
@@ -140,16 +140,6 @@ pipeline {
                             [path: 'rating/src/main/java'],
                             [path: 'search/src/main/java'],
                             [path: 'tax/src/main/java']
-                        ],
-
-                        // Thiết lập Quality Gate để ép fail pipeline
-                        qualityGates: [
-                            [
-                                threshold    : 70.0,
-                                metric       : 'LINE',
-                                baseline     : 'PROJECT',
-                                criticality  : 'FAILURE'
-                            ]
                         ]
                     )
                 }
