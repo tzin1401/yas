@@ -47,7 +47,7 @@ class CountryControllerTest {
 
     @Test
     void testGetPageableCountries_thenReturnOk() throws Exception {
-        given(countryService.getPageableCountries(0, 10)).willReturn(new CountryListGetVm(List.of(), 0, 0));
+        given(countryService.getPageableCountries(0, 10)).willReturn(new CountryListGetVm(List.of(), 0, 0, 0, 0, false));
 
         this.mockMvc.perform(get(Constants.ApiConstant.COUNTRIES_URL + "/paging")
                 .param("pageNo", "0")
@@ -65,7 +65,7 @@ class CountryControllerTest {
 
     @Test
     void testGetCountry_thenReturnOk() throws Exception {
-        given(countryService.findById(1L)).willReturn(new CountryVm("VN", "Vietnam", "VN", "VNM", true, true, true, true, true));
+        given(countryService.findById(1L)).willReturn(new CountryVm(1L, "VN", "Vietnam", "VNM", true, true, true, true, true));
 
         this.mockMvc.perform(get(Constants.ApiConstant.COUNTRIES_URL + "/1"))
             .andExpect(status().isOk());

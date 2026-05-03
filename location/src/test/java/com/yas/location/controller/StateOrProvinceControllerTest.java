@@ -48,7 +48,7 @@ class StateOrProvinceControllerTest {
 
     @Test
     void testGetPageableStateOrProvinces_thenReturnOk() throws Exception {
-        given(stateOrProvinceService.getPageableStateOrProvinces(0, 10, 1L)).willReturn(new StateOrProvinceListGetVm(List.of(), 0, 0));
+        given(stateOrProvinceService.getPageableStateOrProvinces(0, 10, 1L)).willReturn(new StateOrProvinceListGetVm(List.of(), 0, 0, 0, 0, false));
 
         this.mockMvc.perform(get(Constants.ApiConstant.STATE_OR_PROVINCES_URL + "/paging")
                 .param("pageNo", "0")
@@ -68,7 +68,7 @@ class StateOrProvinceControllerTest {
 
     @Test
     void testGetStateOrProvince_thenReturnOk() throws Exception {
-        given(stateOrProvinceService.findById(1L)).willReturn(new StateOrProvinceVm(1L, "name", "code", "type"));
+        given(stateOrProvinceService.findById(1L)).willReturn(new StateOrProvinceVm(1L, "name", "code", "type", 1L));
 
         this.mockMvc.perform(get(Constants.ApiConstant.STATE_OR_PROVINCES_URL + "/1"))
             .andExpect(status().isOk());
