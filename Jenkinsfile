@@ -114,12 +114,43 @@ pipeline {
             }
             post {
                 always {
+                    // 1. Thu thập báo cáo kết quả các case Test (JUnit)
                     junit allowEmptyResults: true,
                           testResults: '**/target/surefire-reports/*.xml,**/target/failsafe-reports/*.xml'
+
+                    // 2. Cấu hình JaCoCo: Nếu không đạt 70% sẽ đánh dấu bản Build là FAILURE (Đỏ)
                     recordCoverage(
                         tools: [[parser: 'JACOCO', pattern: '**/target/site/jacoco/jacoco.xml']],
                         id: 'jacoco',
-                        name: 'JaCoCo Coverage'
+                        name: 'JaCoCo Coverage',
+
+                        // Khai báo đường dẫn để hiển thị mã nguồn (fix lỗi Source file not found)
+                        sourceDirectories: [
+                            [path: 'common-library/src/main/java'],
+                            [path: 'payment/src/main/java'],
+                            [path: 'media/src/main/java'],
+                            [path: 'cart/src/main/java'],
+                            [path: 'catalog/src/main/java'],
+                            [path: 'customer/src/main/java'],
+                            [path: 'inventory/src/main/java'],
+                            [path: 'location/src/main/java'],
+                            [path: 'order/src/main/java'],
+                            [path: 'product/src/main/java'],
+                            [path: 'promotion/src/main/java'],
+                            [path: 'rating/src/main/java'],
+                            [path: 'search/src/main/java'],
+                            [path: 'tax/src/main/java']
+                        ],
+
+                        // Thiết lập Quality Gate để ép fail pipeline
+                        qualityGates: [
+                            [
+                                threshold    : 70.0,
+                                metric       : 'LINE',
+                                baseline     : 'PROJECT',
+                                criticality  : 'FAILURE'
+                            ]
+                        ]
                     )
                 }
             }
