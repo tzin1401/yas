@@ -1,0 +1,63 @@
+\section{Tổng quan dự án}
+
+\subsection{Giới thiệu YAS}
+YAS (\textit{Yet Another Shop}) là một dự án mã nguồn mở được phát triển bởi NashTech Garage, nhằm mục đích xây dựng một ứng dụng thương mại điện tử microservice điển hình bằng Java/Spring Boot.
+
+Dự án sử dụng kiến trúc \textbf{monorepo} --- tất cả các service được quản lý trong một repository duy nhất, bao gồm hơn 19 module:
+\begin{itemize}[noitemsep]
+    \item \textbf{Business Services}: media, product, cart, order, rating, customer, location, inventory, tax, search, payment, promotion, recommendation, delivery, webhook, sampledata
+    \item \textbf{BFF (Backend-for-Frontend)}: storefront-bff, backoffice-bff
+    \item \textbf{Shared Library}: common-library
+\end{itemize}
+
+\subsection{Mục tiêu đồ án}
+Xây dựng hệ thống \textbf{Continuous Integration (CI)} cho dự án YAS bằng Jenkins, đáp ứng các yêu cầu:
+\begin{enumerate}[noitemsep]
+    \item Sử dụng Jenkins làm CI server
+    \item Fork repo và cấu hình branch protection
+    \item Pipeline có ít nhất 2 phase: test và build
+    \item Monorepo path filter --- chỉ build/test service thay đổi
+    \item Coverage gate $\geq$ 70\%
+    \item Security scanning: Gitleaks, SonarQube, Snyk
+\end{enumerate}
+
+\subsection{Công nghệ sử dụng}
+\begin{table}[H]
+\centering
+\caption{Công nghệ và công cụ sử dụng}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Thành phần} & \textbf{Công nghệ} & \textbf{Phiên bản} \\
+\hline
+Ngôn ngữ & Java & 21 \\
+\hline
+Framework & Spring Boot & 3.2 \\
+\hline
+Build tool & Maven & Latest LTS \\
+\hline
+CI Server & Jenkins & 2.555.1 \\
+\hline
+Code hosting & GitHub & --- \\
+\hline
+JDK (Jenkins) & OpenJDK & 25 \\
+\hline
+Secret scanning & Gitleaks & 8.18.4 \\
+\hline
+Code quality & SonarQube & Self-hosted \\
+\hline
+Dependency scan & Snyk & CLI \\
+\hline
+Coverage tool & JaCoCo & 0.8.14 \\
+\hline
+Infrastructure & AWS EC2 & --- \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Thông tin repository}
+\begin{itemize}[noitemsep]
+    \item \textbf{Repository gốc}: \url{https://github.com/nashtech-garage/yas}
+    \item \textbf{Repository nhóm (fork)}: \url{https://github.com/tzin1401/yas}
+    \item \textbf{Jenkins}: \url{http://3.27.92.213:8080}
+    \item \textbf{SonarQube}: \url{http://3.27.92.213:9000}
+\end{itemize}

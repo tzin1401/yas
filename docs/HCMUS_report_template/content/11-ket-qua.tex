@@ -1,0 +1,97 @@
+\section{Kết quả thực thi Pipeline}
+
+\subsection{Danh sách Pull Requests}
+\begin{table}[H]
+\centering
+\caption{Danh sách Pull Requests trên GitHub}
+\begin{tabular}{|c|l|l|l|}
+\hline
+\textbf{PR} & \textbf{Title} & \textbf{Branch} & \textbf{Trạng thái} \\
+\hline
+\#5 & ci: setup Jenkins pipeline & ci/setup-jenkins-pipeline & Merged \\
+\hline
+\#6 & test(tax): add coverage & tri/tax-tests & Open (CI pass) \\
+\hline
+\#7 & test(media): add coverage & feature/media-tests & Open (CI pass) \\
+\hline
+\#8 & fix(ci): coverage gate bug & ci/setup-jenkins-pipeline & Open \\
+\hline
+\end{tabular}
+\end{table}
+
+% [Ảnh: GitHub Pull Requests list]
+
+\subsection{Kết quả Pipeline cho PR \#7 (media)}
+\begin{table}[H]
+\centering
+\caption{Kết quả pipeline PR \#7 - Module media}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Stage} & \textbf{Kết quả} & \textbf{Thời gian} \\
+\hline
+Checkout SCM & \textcolor{green}{PASS} & 7s \\
+\hline
+Tool Install & \textcolor{green}{PASS} & 0.22s \\
+\hline
+Checkout & \textcolor{green}{PASS} & 4s \\
+\hline
+Detect Changed Modules & \textcolor{green}{PASS} & 0.74s \\
+\hline
+Gitleaks -- Secret Scan & \textcolor{green}{PASS} & 2s \\
+\hline
+Test & \textcolor{green}{PASS} (36 tests, 0 failures) & 74s \\
+\hline
+Coverage Gate & \textcolor{green}{PASS} & --- \\
+\hline
+Build & \textcolor{green}{PASS} & 82ms \\
+\hline
+SonarQube -- Analysis & \textcolor{green}{PASS} & 10min \\
+\hline
+Snyk -- Dependency Scan & Warning (exit -13) & 45s \\
+\hline
+\end{tabular}
+\end{table}
+
+% [Ảnh: Jenkins Pipeline Stage View - PR #7 (tất cả stages xanh)]
+% [Ảnh: Console output PR #7 - "Tests run: 36, Failures: 0"]
+
+\subsection{Kết quả Pipeline cho PR \#6 (tax)}
+\begin{table}[H]
+\centering
+\caption{Kết quả pipeline PR \#6 - Module tax}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Stage} & \textbf{Kết quả} & \textbf{Thời gian} \\
+\hline
+Checkout SCM & \textcolor{green}{PASS} & --- \\
+\hline
+Detect Changed Modules & \textcolor{green}{PASS} & --- \\
+\hline
+Gitleaks -- Secret Scan & \textcolor{green}{PASS} & --- \\
+\hline
+Test & \textcolor{green}{PASS} (47 tests, 0 failures) & --- \\
+\hline
+Coverage Gate & \textcolor{green}{PASS} & --- \\
+\hline
+Build & \textcolor{green}{PASS} & --- \\
+\hline
+SonarQube -- Analysis & \textcolor{green}{PASS} & --- \\
+\hline
+Snyk -- Dependency Scan & Warning (exit -13) & --- \\
+\hline
+\end{tabular}
+\end{table}
+
+% [Ảnh: Jenkins Pipeline Stage View - PR #6]
+% [Ảnh: Console output PR #6 - "Tests run: 47, Failures: 0"]
+
+\subsection{Minh chứng Branch Protection hoạt động}
+Trên mỗi Pull Request, GitHub hiển thị:
+\begin{enumerate}[noitemsep]
+    \item \textbf{Review required}: ``At least 2 approving reviews are required''
+    \item \textbf{Status checks}: CI pipeline phải pass trước khi merge
+    \item \textbf{Merge blocked}: Nút ``Merge'' bị disabled khi chưa đủ conditions
+\end{enumerate}
+
+% [Ảnh: GitHub PR hiển thị "Review required" + "Checks passed"]
+% [Ảnh: GitHub PR hiển thị "Merging is blocked" khi chưa đủ approvals]

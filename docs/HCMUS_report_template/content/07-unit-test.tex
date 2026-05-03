@@ -1,0 +1,106 @@
+\section{Unit Test và Coverage Gate}
+\label{sec:unittest}
+
+\subsection{Chiến lược Unit Test}
+Nhóm viết thêm unit test cho 2 service modules:
+\begin{itemize}[noitemsep]
+    \item \textbf{media}: Test cho MediaService và FileSystemRepository
+    \item \textbf{tax}: Test cho TaxService và TaxController
+\end{itemize}
+
+Mỗi PR (Pull Request) chỉ thêm test cho module tương ứng, đảm bảo tính module hóa.
+
+\subsection{Chi tiết Test Cases}
+
+\subsubsection{Module media (PR \#7)}
+\begin{table}[H]
+\centering
+\caption{Unit tests cho module media}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Test class} & \textbf{Số tests} & \textbf{Kết quả} \\
+\hline
+MediaServiceUnitTest & 20 & Pass \\
+\hline
+FileSystemRepositoryTest & 9 & Pass \\
+\hline
+common-library tests (dependency) & 7 & Pass \\
+\hline
+\textbf{Tổng} & \textbf{36} & \textbf{100\% Pass} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Module tax (PR \#6)}
+\begin{table}[H]
+\centering
+\caption{Unit tests cho module tax}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Test class} & \textbf{Số tests} & \textbf{Kết quả} \\
+\hline
+TaxRateServiceTest & 20 & Pass \\
+\hline
+TaxClassServiceTest & 10 & Pass \\
+\hline
+TaxRateControllerTest & 10 & Pass \\
+\hline
+common-library tests (dependency) & 7 & Pass \\
+\hline
+\textbf{Tổng} & \textbf{47} & \textbf{100\% Pass} \\
+\hline
+\end{tabular}
+\end{table}
+
+% [Ảnh: Jenkins Test Result - PR #7 (media) - hiển thị 36 tests pass]
+% [Ảnh: Jenkins Test Result - PR #6 (tax) - hiển thị 47 tests pass]
+
+\subsection{Coverage Gate Script (check-coverage.sh)}
+Script \texttt{ci/check-coverage.sh} kiểm tra LINE coverage từ JaCoCo report:
+
+\begin{lstlisting}[language=bash, caption={check-coverage.sh - Coverage Gate}]
+#!/usr/bin/env bash
+set -euo pipefail
+
+module="$1"
+minimum="$2"
+report_path="${module}/target/site/jacoco/jacoco.xml"
+
+# Kiem tra file ton tai
+if [[ ! -f "${report_path}" ]]; then
+  echo "[WARN] Coverage report missing — skipping"
+  exit 0
+fi
+
+# Lay LINE counter cap report-level (dong cuoi cung)
+line_counter="$(grep '<counter type="LINE"' "${report_path}" | tail -1)"
+covered="$(echo "${line_counter}" | sed 's/.*covered="\([0-9]*\)".*/\1/')"
+missed="$(echo "${line_counter}" | sed 's/.*missed="\([0-9]*\)".*/\1/')"
+
+# Tinh phan tram
+total=$((covered + missed))
+coverage_percent="$(awk -v c="${covered}" -v t="${total}" \
+    'BEGIN { printf "%.2f", (c / t) * 100 }')"
+
+echo "Module ${module} line coverage: ${coverage_percent}%"
+
+# So sanh voi nguong
+if awk -v actual="${coverage_percent}" -v threshold="${minimum}" \
+    'BEGIN { exit !(actual + 0 >= threshold + 0) }'; then
+  exit 0
+fi
+
+echo "Coverage gate failed: ${coverage_percent}% < ${minimum}%"
+exit 1
+\end{lstlisting}
+
+\subsection{Thiết kế Coverage Gate}
+\begin{itemize}[noitemsep]
+    \item \textbf{Ngưỡng}: 70\% LINE coverage (cấu hình qua biến \texttt{COVERAGE\_THRESHOLD})
+    \item \textbf{Report level}: Sử dụng \texttt{tail -1} để lấy LINE counter cấp \textbf{report-level} (tổng hợp toàn module), không phải method-level
+    \item \textbf{Exclude common-library}: Shared library từ upstream chỉ có 33\% coverage, không phải service cần enforce
+    \item \textbf{Parse}: Dùng \texttt{grep + sed} để extract attributes từ JaCoCo XML (thay thế awk bị lỗi parsing ở phiên bản cũ)
+    \item \textbf{Graceful skip}: Nếu module không có executable code hoặc report thiếu, pipeline không fail mà warning và skip
+\end{itemize}
+
+% [Ảnh: Console output hiển thị "Module media line coverage: XX.XX% (required >= 70%)"]

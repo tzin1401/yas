@@ -1,0 +1,60 @@
+\section{Kết luận}
+
+\subsection{Tổng kết}
+Nhóm đã hoàn thành việc xây dựng hệ thống CI cho dự án YAS (Yet Another Shop) với đầy đủ các yêu cầu:
+
+\begin{table}[H]
+\centering
+\caption{Checklist yêu cầu đồ án}
+\begin{tabular}{|c|l|c|}
+\hline
+\textbf{STT} & \textbf{Yêu cầu} & \textbf{Trạng thái} \\
+\hline
+1 & Sử dụng Jenkins & $\checkmark$ \\
+\hline
+2 & Fork repo YAS & $\checkmark$ \\
+\hline
+3 & Branch protection (2 approvals + CI pass) & $\checkmark$ \\
+\hline
+4 & Jenkins quét từng branch & $\checkmark$ \\
+\hline
+5 & Pipeline $\geq$ 2 phases (test + build) + coverage & $\checkmark$ \\
+\hline
+6 & Monorepo path filter & $\checkmark$ \\
+\hline
+7a & Thêm unit test cho $\geq$ 2 services & $\checkmark$ \\
+\hline
+7b & Coverage gate $\geq$ 70\% & $\checkmark$ \\
+\hline
+7c & Security scanning (Gitleaks + SonarQube + Snyk) & $\checkmark$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Điểm nổi bật}
+\begin{enumerate}[noitemsep]
+    \item \textbf{Pipeline 8 stages}: Thiết kế pipeline đầy đủ từ checkout đến security scanning, mỗi stage có mục đích rõ ràng
+    \item \textbf{Monorepo-aware}: Path filter thông minh giúp giảm thời gian build từ $\sim$30 phút xuống $\sim$5 phút
+    \item \textbf{Coverage Gate thực sự enforce}: Parse JaCoCo XML report và so sánh với ngưỡng 70\%, pipeline FAIL nếu không đạt
+    \item \textbf{Gitleaks với baseline}: Xử lý 13 false positives từ upstream bằng \texttt{.gitleaksignore} và baseline, chỉ phát hiện secrets mới
+    \item \textbf{Retry mechanism cho Snyk}: Tự động retry với \texttt{--max-depth=3} nếu lần quét đầu fail
+    \item \textbf{Graceful degradation}: Pipeline không bị block bởi các lỗi infrastructure (Snyk OOM, shallow clone), nhưng vẫn báo warning
+\end{enumerate}
+
+\subsection{Khó khăn gặp phải}
+\begin{enumerate}[noitemsep]
+    \item \textbf{Shallow clone}: Jenkins Multibranch Pipeline mặc định dùng shallow clone, khiến \texttt{git diff} không hoạt động. Fix bằng \texttt{git fetch origin main}.
+    \item \textbf{Upstream secrets}: Repository gốc chứa nhiều K8s secrets dạng base64, gây false positives cho Gitleaks. Fix bằng \texttt{.gitleaksignore} + \texttt{gitleaks.toml} allowlist.
+    \item \textbf{Awk parsing bug}: Script coverage gate ban đầu dùng awk nhưng logic so sánh field không đúng, dẫn đến coverage gate luôn skip. Fix bằng \texttt{grep + sed}.
+    \item \textbf{Snyk OOM}: EC2 instance thiếu RAM khiến Snyk CLI bị kill (exit -13). Workaround bằng retry + graceful degradation.
+    \item \textbf{Jenkins branch status pending}: Multibranch Pipeline disable branch builds khi branch đã có PR, khiến status ``branch'' kẹt pending trên GitHub. Đây là known behavior, không ảnh hưởng merge.
+\end{enumerate}
+
+\subsection{Hướng phát triển}
+\begin{itemize}[noitemsep]
+    \item Thêm \textbf{CD (Continuous Deployment)}: Tự động deploy lên staging/production
+    \item Tăng coverage cho \textbf{tất cả service modules}, không chỉ media và tax
+    \item Fix Snyk OOM bằng cách nâng cấp EC2 instance
+    \item Thêm \textbf{DAST} (Dynamic Application Security Testing) cho các API endpoints
+    \item Tích hợp \textbf{Slack/Discord notification} khi pipeline fail
+\end{itemize}

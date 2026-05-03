@@ -1,0 +1,53 @@
+\section{Kiến trúc hệ thống CI}
+
+\subsection{Tổng quan kiến trúc}
+Hệ thống CI được thiết kế với luồng hoạt động như sau:
+
+\begin{enumerate}[noitemsep]
+    \item Developer tạo branch mới, viết code và push lên GitHub
+    \item Developer tạo Pull Request (PR) vào branch \texttt{main}
+    \item GitHub Webhook tự động thông báo Jenkins
+    \item Jenkins Multibranch Pipeline tự động phát hiện và chạy pipeline
+    \item Pipeline thực thi 8 stages tuần tự
+    \item Kết quả CI được báo về GitHub qua commit status
+    \item PR chỉ được merge khi CI pass và có đủ 2 reviewer approve
+\end{enumerate}
+
+\subsection{Sơ đồ luồng CI}
+Luồng CI pipeline bao gồm 8 stages chính:
+
+\begin{table}[H]
+\centering
+\caption{8 Stages của CI Pipeline}
+\begin{tabular}{|c|l|l|}
+\hline
+\textbf{Stage} & \textbf{Tên} & \textbf{Mô tả} \\
+\hline
+1 & Checkout & Clone code, fetch origin/main \\
+\hline
+2 & Detect Changed Modules & Xác định modules thay đổi (monorepo filter) \\
+\hline
+3 & Gitleaks -- Secret Scan & Quét secrets/API keys rò rỉ \\
+\hline
+4 & Test & Chạy unit tests + JaCoCo coverage report \\
+\hline
+5 & Coverage Gate & Kiểm tra coverage $\geq$ 70\% \\
+\hline
+6 & Build & Build các modules thay đổi \\
+\hline
+7 & SonarQube -- Analysis & Phân tích chất lượng code \\
+\hline
+8 & Snyk -- Dependency Scan & Quét lỗ hổng dependencies \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Hạ tầng}
+\begin{itemize}[noitemsep]
+    \item \textbf{Jenkins Server}: AWS EC2 instance, truy cập tại \texttt{http://3.27.92.213:8080}
+    \item \textbf{SonarQube Server}: Cùng EC2 instance, port 9000
+    \item \textbf{Jenkins Version}: 2.555.1
+    \item \textbf{Executors}: 2 (chạy song song tối đa 2 builds)
+    \item \textbf{Build Discarder}: Giữ tối đa 10 builds gần nhất
+    \item \textbf{Timeout}: 60 phút mỗi build
+\end{itemize}

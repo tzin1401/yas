@@ -1,0 +1,27 @@
+\section*{Phụ lục A: Danh sách files CI}
+
+\begin{table}[H]
+\centering
+\caption{Các file CI trong repository}
+\begin{tabular}{|l|l|c|}
+\hline
+\textbf{File} & \textbf{Mô tả} & \textbf{Dòng} \\
+\hline
+\texttt{Jenkinsfile} & Pipeline chính (8 stages) & 298 \\
+\hline
+\texttt{ci/detect-changed-modules.sh} & Monorepo path filter & 74 \\
+\hline
+\texttt{ci/check-coverage.sh} & Coverage gate $\geq$ 70\% & 43 \\
+\hline
+\texttt{gitleaks.toml} & Gitleaks configuration & 24 \\
+\hline
+\texttt{.gitleaksignore} & Ignored secrets (13 entries) & 14 \\
+\hline
+\texttt{gitleaks-baseline.json} & Gitleaks baseline & 1 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section*{Phụ lục B: Toàn bộ Jenkinsfile}
+\vietnameselst
+\lstinputlisting[language=java, caption={Jenkinsfile đầy đủ}]{code/Jenkinsfile.txt}

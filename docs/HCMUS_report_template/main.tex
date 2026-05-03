@@ -1,0 +1,70 @@
+\documentclass[12pt]{article}
+
+\usepackage{hcmus-report-template}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+% Disable indentation on new paragraphs
+\setlength{\parindent}{0pt}
+
+% Line spacing 1.5
+\renewcommand{\baselinestretch}{1.5}
+
+% Graphic path
+\graphicspath{{img/}}
+
+% Define course name, report name and report title.
+\newcommand{\coursename}{DevOps}
+\newcommand{\reportname}{Triển khai hệ thống CI cho dự án YAS}
+\newcommand{\reporttitle}{Đồ án 1: Triển khai hệ thống CI}
+
+\newcommand{\studentname}{%
+Nguyễn Lê Thế Vinh (MSSV1)\\
+Phạm Quang Vinh (MSSV2)\\
+Lê Xuân Trí (MSSV3)%
+}
+\newcommand{\teachername}{[Tên giảng viên]}
+
+% Header
+\lhead{\reporttitle}
+\rhead{
+Trường Đại học Khoa học Tự nhiên - ĐHQG HCM\\
+\coursename
+}
+
+% Footer
+\newcommand{\leftfooter}{YAS CI/CD Pipeline Report}
+\lfoot{\leftfooter}
+
+% ============ DOCUMENT ============
+\begin{document}
+
+\pagenumbering{roman}
+\input{content/title.tex}
+
+\tableofcontents
+\pagebreak
+
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+% Nội dung báo cáo
+\input{content/01-tong-quan.tex}
+\input{content/02-kien-truc.tex}
+\input{content/03-cau-hinh-github.tex}
+\input{content/04-cau-hinh-jenkins.tex}
+\input{content/05-pipeline.tex}
+\input{content/06-monorepo.tex}
+\input{content/07-unit-test.tex}
+\input{content/08-gitleaks.tex}
+\input{content/09-sonarqube.tex}
+\input{content/10-snyk.tex}
+\input{content/11-ket-qua.tex}
+\input{content/12-phan-cong.tex}
+\input{content/13-ket-luan.tex}
+
+% References
+\input{ref/ref.tex}
+
+\end{document}

@@ -1,0 +1,97 @@
+\section{Phân công công việc}
+
+\subsection{Thành viên nhóm}
+\begin{table}[H]
+\centering
+\caption{Thông tin thành viên nhóm}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Họ tên} & \textbf{MSSV} & \textbf{Vai trò} \\
+\hline
+Nguyễn Lê Thế Vinh & [MSSV1] & Leader \\
+\hline
+Phạm Quang Vinh & [MSSV2] & Infra \& Security \\
+\hline
+Lê Xuân Trí & [MSSV3] & Testing \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Chi tiết phân công}
+
+\subsubsection{Nguyễn Lê Thế Vinh (Leader)}
+\begin{itemize}[noitemsep]
+    \item Fork repository, thêm collaborators
+    \item Viết \texttt{Jenkinsfile} (8 stages, 298 dòng)
+    \item Viết \texttt{ci/detect-changed-modules.sh} (monorepo path filter)
+    \item Viết \texttt{ci/check-coverage.sh} (coverage gate $\geq$ 70\%)
+    \item Cấu hình \texttt{gitleaks.toml}, \texttt{.gitleaksignore}, \texttt{gitleaks-baseline.json}
+    \item Cấu hình GitHub Rulesets (branch protection)
+    \item Debug và fix awk parsing bug trong coverage gate
+    \item Viết báo cáo
+    \item Review và approve PRs
+\end{itemize}
+
+\subsubsection{Phạm Quang Vinh (Infra \& Security)}
+\begin{itemize}[noitemsep]
+    \item Setup AWS EC2 instance
+    \item Cài đặt và cấu hình Jenkins server
+    \item Cài đặt và cấu hình SonarQube server
+    \item Cài đặt Snyk CLI trên Jenkins server
+    \item Cấu hình Jenkins Credentials (SonarQube token, Snyk token)
+    \item Cấu hình Jenkins Global Tools (JDK-25, Maven)
+    \item Tạo Multibranch Pipeline job
+    \item Cấu hình Webhook GitHub → Jenkins
+    \item Review và approve PRs
+\end{itemize}
+
+\subsubsection{Lê Xuân Trí (Testing)}
+\begin{itemize}[noitemsep]
+    \item Viết unit tests cho module \textbf{media} (PR \#7)
+    \begin{itemize}
+        \item MediaServiceUnitTest
+        \item FileSystemRepositoryTest
+    \end{itemize}
+    \item Viết unit tests cho module \textbf{tax} (PR \#6)
+    \begin{itemize}
+        \item TaxRateServiceTest
+        \item TaxClassServiceTest
+        \item TaxRateControllerTest
+    \end{itemize}
+    \item Đảm bảo coverage $\geq$ 70\% cho từng module
+    \item Tạo Pull Requests theo quy trình
+    \item Review và approve PRs
+\end{itemize}
+
+\subsection{Tổng kết đóng góp}
+\begin{table}[H]
+\centering
+\caption{Tổng kết đóng góp theo thành viên}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Hạng mục} & \textbf{Vinh.NL} & \textbf{Vinh.PQ} & \textbf{Trí} \\
+\hline
+Pipeline (Jenkinsfile) & $\checkmark$ & & \\
+\hline
+CI Scripts & $\checkmark$ & & \\
+\hline
+Security Config & $\checkmark$ & $\checkmark$ & \\
+\hline
+Infrastructure & & $\checkmark$ & \\
+\hline
+Jenkins Setup & & $\checkmark$ & \\
+\hline
+SonarQube Setup & & $\checkmark$ & \\
+\hline
+Unit Tests -- media & & & $\checkmark$ \\
+\hline
+Unit Tests -- tax & & & $\checkmark$ \\
+\hline
+Branch Protection & $\checkmark$ & & \\
+\hline
+Code Review & $\checkmark$ & $\checkmark$ & $\checkmark$ \\
+\hline
+Báo cáo & $\checkmark$ & & \\
+\hline
+\end{tabular}
+\end{table}

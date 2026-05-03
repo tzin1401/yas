@@ -1,0 +1,60 @@
+\section{SonarQube -- Code Quality Analysis}
+\label{sec:sonarqube}
+
+\subsection{Giới thiệu}
+SonarQube là nền tảng phân tích chất lượng code, phát hiện bugs, code smells, security vulnerabilities và đo lường coverage.
+
+Nhóm sử dụng SonarQube \textbf{self-hosted} trên cùng AWS EC2 instance với Jenkins, truy cập tại \texttt{http://3.27.92.213:9000}.
+
+\subsection{Cấu hình Server}
+\begin{itemize}[noitemsep]
+    \item \textbf{SonarQube URL}: \texttt{http://3.27.92.213:9000}
+    \item \textbf{Authentication}: Token-based, lưu trong Jenkins Credentials (\texttt{sonarqube-token})
+    \item \textbf{Project Key}: \texttt{nashtech-garage\_yas-yas-parent} (auto-detected từ pom.xml)
+\end{itemize}
+
+% [Ảnh: SonarQube Dashboard - Overview]
+
+\subsection{Tích hợp trong Pipeline}
+\begin{lstlisting}[language=java, caption={SonarQube stage trong Jenkinsfile}]
+stage('SonarQube - Analysis') {
+    steps {
+        withCredentials([string(
+            credentialsId: 'sonarqube-token', 
+            variable: 'SONAR_TOKEN')]) {
+            script {
+                def modules = env.CHANGED_MODULES.split(',')
+                def serviceModules = modules.findAll { 
+                    it != 'common-library' 
+                }
+                def plArg = serviceModules.join(',')
+                sh """
+                    mvn sonar:sonar \
+                      -pl ${plArg} -am \
+                      -Dsonar.host.url=${SONAR_HOST_URL} \
+                      -Dsonar.token=${SONAR_TOKEN} \
+                      -Dsonar.coverage.jacoco.xmlReportPaths=\
+                        target/site/jacoco/jacoco.xml
+                """
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{Thiết kế}
+\begin{itemize}[noitemsep]
+    \item Chỉ phân tích \textbf{service modules} thay đổi (exclude common-library)
+    \item Sử dụng JaCoCo report cho coverage metrics trên SonarQube
+    \item Token được inject qua \texttt{withCredentials}, không hardcode trong code
+\end{itemize}
+
+\subsection{Kết quả}
+\begin{itemize}[noitemsep]
+    \item Console: \texttt{[INFO] ANALYSIS SUCCESSFUL}
+    \item SonarQube task URL được in ra để truy cập dashboard
+    \item Dashboard hiển thị: bugs, vulnerabilities, code smells, coverage percentage, duplications
+\end{itemize}
+
+% [Ảnh: SonarQube Dashboard - Project overview (bugs, coverage, smells)]
+% [Ảnh: Console output "[INFO] ANALYSIS SUCCESSFUL"]

@@ -1,0 +1,53 @@
+\section{Snyk -- Dependency Vulnerability Scan}
+\label{sec:snyk}
+
+\subsection{Giới thiệu}
+Snyk là công cụ quét lỗ hổng bảo mật trong dependencies (thư viện phụ thuộc). Nhóm tích hợp Snyk CLI vào pipeline để tự động phát hiện các thư viện có CVE (Common Vulnerabilities and Exposures).
+
+\subsection{Cấu hình}
+\begin{itemize}[noitemsep]
+    \item \textbf{Snyk CLI}: Cài đặt trên Jenkins server
+    \item \textbf{Authentication}: Token-based, lưu trong Jenkins Credentials (\texttt{snyk-token})
+    \item \textbf{Severity threshold}: \texttt{high} --- chỉ báo cáo lỗ hổng mức high trở lên
+\end{itemize}
+
+\subsection{Tích hợp trong Pipeline}
+Stage Snyk thực hiện 2 bước cho mỗi service module:
+
+\subsubsection{Snyk Test}
+Quét dependencies và báo cáo lỗ hổng:
+\begin{lstlisting}[language=bash, caption={Snyk Test command}]
+snyk test \
+  --file=${module}/pom.xml \
+  --severity-threshold=high \
+  --all-sub-projects
+\end{lstlisting}
+
+\subsubsection{Snyk Monitor}
+Đẩy snapshot dependencies lên Snyk dashboard để theo dõi liên tục:
+\begin{lstlisting}[language=bash, caption={Snyk Monitor command}]
+snyk monitor \
+  --file=${module}/pom.xml \
+  --project-name=yas-${module}
+\end{lstlisting}
+
+\subsection{Xử lý lỗi}
+Pipeline được thiết kế với cơ chế \textbf{retry} và \textbf{graceful degradation}:
+\begin{enumerate}[noitemsep]
+    \item Chạy \texttt{snyk test} lần 1
+    \item Nếu fail → retry với \texttt{--max-depth=3} (giảm độ sâu dependency tree)
+    \item Nếu vẫn fail → ghi warning, pipeline \textbf{tiếp tục} (không block)
+\end{enumerate}
+
+\subsection{Known Issue: Exit Code -13}
+Hiện tại Snyk CLI gặp lỗi \texttt{exit code: -13} trên Jenkins server:
+\begin{lstlisting}[caption={Snyk error output}]
+ERROR  Unspecified Error (SNYK-CLI-0000)
+Child process failed with exit code: -13.
+\end{lstlisting}
+
+\textbf{Nguyên nhân}: Process bị kill do thiếu RAM trên EC2 instance hoặc Snyk CLI version cũ.\\
+\textbf{Ảnh hưởng}: Pipeline vẫn pass nhờ cơ chế retry + graceful degradation.\\
+\textbf{Hướng fix}: Nâng cấp RAM EC2 hoặc update Snyk CLI lên phiên bản mới nhất.
+
+% [Ảnh: Console output Snyk scanning]

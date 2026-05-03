@@ -1,0 +1,77 @@
+\section{Monorepo Path Filter}
+\label{sec:monorepo}
+
+\subsection{Vấn đề}
+YAS là một monorepo chứa hơn 19 modules. Nếu mỗi lần push đều build/test \textbf{toàn bộ} modules, thời gian CI sẽ rất lâu và lãng phí tài nguyên. Cần một cơ chế chỉ build/test các modules thực sự thay đổi.
+
+\subsection{Giải pháp: detect-changed-modules.sh}
+Nhóm viết script \texttt{ci/detect-changed-modules.sh} (74 dòng) để xác định modules thay đổi so với \texttt{origin/main}.
+
+\begin{lstlisting}[language=bash, caption={Logic chính của detect-changed-modules.sh}]
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Danh sach cac module cua monorepo
+modules=(
+  automation-ui backoffice-bff cart common-library
+  customer delivery discount inventory location
+  media order payment product promotion
+  rating recommendation sampledata search
+  storefront-bff tax webhook
+)
+
+# Lay danh sach files thay doi so voi origin/main
+changed_files="$(git diff --name-only origin/main...HEAD 2>/dev/null || true)"
+
+# Neu thay doi o root files -> build tat ca modules
+if grep -Eq '^(pom\.xml|\.github/|checkstyle/|common-library/|docker/|k8s/|scripts/)' \
+     <<< "${changed_files}"; then
+    printf '%s\n' "${modules[@]}" | paste -sd ','
+    exit 0
+fi
+
+# Map file -> module
+selected_modules=()
+for mod in "${modules[@]}"; do
+    if grep -q "^${mod}/" <<< "${changed_files}"; then
+        selected_modules+=("${mod}")
+    fi
+done
+
+# Fallback: build common-library
+if [[ ${#selected_modules[@]} -eq 0 ]]; then
+    selected_modules=("common-library")
+fi
+
+printf '%s\n' "${selected_modules[@]}" | paste -sd ','
+\end{lstlisting}
+
+\subsection{Chiến lược phát hiện thay đổi}
+\begin{table}[H]
+\centering
+\caption{Quy tắc phát hiện module thay đổi}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Files thay đổi} & \textbf{Modules được build} \\
+\hline
+\texttt{pom.xml} (root) & Tất cả modules \\
+\hline
+\texttt{common-library/*} & Tất cả modules (shared dependency) \\
+\hline
+\texttt{media/src/*} & Chỉ \texttt{media} \\
+\hline
+\texttt{tax/src/*} & Chỉ \texttt{tax} \\
+\hline
+\texttt{ci/*}, \texttt{docs/*} & \texttt{common-library} (fallback) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Kết quả}
+\begin{itemize}[noitemsep]
+    \item Thời gian build giảm đáng kể: thay vì build toàn bộ 19 modules ($\sim$30 phút), chỉ build 1--2 modules ($\sim$3--5 phút)
+    \item Tiết kiệm tài nguyên AWS EC2
+    \item Pipeline vẫn đảm bảo tính chính xác nhờ flag \texttt{-am} (also make dependencies)
+\end{itemize}
+
+% [Ảnh: Console output hiển thị "Modules selected for CI: media"]

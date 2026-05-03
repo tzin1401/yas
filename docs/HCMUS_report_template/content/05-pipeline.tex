@@ -1,0 +1,167 @@
+\section{Chi tiết Pipeline (Jenkinsfile)}
+
+Pipeline được viết bằng \textbf{Declarative Pipeline} trong file \texttt{Jenkinsfile} tại root của repository. Tổng cộng 298 dòng, 8 stages chính.
+
+\subsection{Cấu hình chung}
+\begin{lstlisting}[language=java, caption={Cấu hình pipeline}]
+pipeline {
+    agent any
+    tools {
+        maven 'Maven'
+        jdk   'JDK-25'
+    }
+    options {
+        timestamps()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timeout(time: 60, unit: 'MINUTES')
+        disableConcurrentBuilds()
+    }
+    environment {
+        COVERAGE_THRESHOLD = '70'
+        SONAR_HOST_URL     = 'http://3.27.92.213:9000'
+        MAVEN_OPTS         = '-Xmx512m -XX:MaxMetaspaceSize=256m'
+    }
+}
+\end{lstlisting}
+
+Các cấu hình quan trọng:
+\begin{itemize}[noitemsep]
+    \item \texttt{COVERAGE\_THRESHOLD = '70'}: Ngưỡng coverage tối thiểu 70\%
+    \item \texttt{MAVEN\_OPTS}: Giới hạn bộ nhớ JVM để phù hợp với EC2
+    \item \texttt{disableConcurrentBuilds()}: Tránh xung đột khi nhiều builds chạy cùng lúc
+\end{itemize}
+
+\subsection{Stage 1: Checkout}
+\begin{lstlisting}[language=java, caption={Stage Checkout}]
+stage('Checkout') {
+    steps {
+        checkout scm
+        sh 'git fetch origin main:refs/remotes/origin/main || true'
+        sh 'chmod +x ci/detect-changed-modules.sh ci/check-coverage.sh'
+    }
+}
+\end{lstlisting}
+
+Stage này thực hiện:
+\begin{itemize}[noitemsep]
+    \item Clone source code từ GitHub
+    \item Fetch \texttt{origin/main} để có baseline cho việc so sánh thay đổi (fix shallow clone của Jenkins)
+    \item Cấp quyền thực thi cho các CI scripts
+\end{itemize}
+
+\subsection{Stage 2: Detect Changed Modules}
+\begin{lstlisting}[language=java, caption={Stage Detect Changed Modules}]
+stage('Detect Changed Modules') {
+    steps {
+        script {
+            env.CHANGED_MODULES = sh(
+                script: 'ci/detect-changed-modules.sh',
+                returnStdout: true
+            ).trim()
+        }
+    }
+}
+\end{lstlisting}
+
+Stage này gọi script \texttt{ci/detect-changed-modules.sh} để xác định modules nào thay đổi so với \texttt{origin/main}. Chi tiết về script được mô tả ở Mục \ref{sec:monorepo}.
+
+\subsection{Stage 3: Gitleaks -- Secret Scan}
+Quét toàn bộ source code tìm secrets/API keys bị rò rỉ. Chi tiết ở Mục \ref{sec:gitleaks}.
+
+\subsection{Stage 4: Test (JUnit + JaCoCo)}
+\begin{lstlisting}[language=java, caption={Stage Test}]
+stage('Test') {
+    steps {
+        script {
+            def modules = env.CHANGED_MODULES.split(',')
+            for (module in modules) {
+                sh "mvn -B -ntp -pl ${module} -am test jacoco:report -DskipITs"
+            }
+        }
+    }
+    post {
+        always {
+            junit allowEmptyResults: true,
+                  testResults: '**/target/surefire-reports/*.xml'
+            archiveArtifacts allowEmptyArchive: true,
+                             artifacts: '**/target/site/jacoco/jacoco.xml'
+        }
+    }
+}
+\end{lstlisting}
+
+Stage này:
+\begin{itemize}[noitemsep]
+    \item Chỉ chạy test cho \textbf{modules thay đổi} (\texttt{-pl \$\{module\}})
+    \item Tự động build dependencies (\texttt{-am}: also make)
+    \item Skip Integration Tests (\texttt{-DskipITs})
+    \item Sinh JaCoCo coverage report (\texttt{jacoco:report})
+    \item Upload test results (JUnit XML) và coverage report (JaCoCo XML) lên Jenkins
+\end{itemize}
+
+\subsection{Stage 5: Coverage Gate}
+\begin{lstlisting}[language=java, caption={Stage Coverage Gate}]
+stage('Coverage Gate') {
+    steps {
+        script {
+            def modules = env.CHANGED_MODULES.split(',')
+            def serviceModules = modules.findAll { it != 'common-library' }
+            if (serviceModules.isEmpty()) {
+                echo ">>> No service modules to check coverage"
+            } else {
+                for (module in serviceModules) {
+                    sh "ci/check-coverage.sh ${module} ${env.COVERAGE_THRESHOLD}"
+                }
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+Stage này:
+\begin{itemize}[noitemsep]
+    \item Gọi script \texttt{ci/check-coverage.sh} để kiểm tra coverage $\geq$ 70\%
+    \item \textbf{Exclude common-library}: Đây là shared library với coverage 33\% từ upstream, không phải service module
+    \item Script parse JaCoCo XML report, tính LINE coverage percentage
+    \item Pipeline FAIL nếu bất kỳ service module nào có coverage $<$ 70\%
+\end{itemize}
+
+\subsection{Stage 6: Build}
+\begin{lstlisting}[language=java, caption={Stage Build}]
+stage('Build') {
+    steps {
+        script {
+            def modules = env.CHANGED_MODULES.split(',')
+            for (module in modules) {
+                sh "mvn -B -ntp -DskipTests -pl ${module} -am package"
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+Build chỉ các modules thay đổi, skip tests (đã chạy ở stage 4).
+
+\subsection{Stage 7: SonarQube Analysis}
+Phân tích chất lượng code. Chi tiết ở Mục \ref{sec:sonarqube}.
+
+\subsection{Stage 8: Snyk Dependency Scan}
+Quét lỗ hổng bảo mật trong dependencies. Chi tiết ở Mục \ref{sec:snyk}.
+
+\subsection{Post Actions}
+\begin{lstlisting}[language=java, caption={Post-build actions}]
+post {
+    always { cleanWs() }
+    success {
+        echo "PIPELINE PASSED SUCCESSFULLY"
+    }
+    failure {
+        echo "PIPELINE FAILED - Check console output"
+    }
+}
+\end{lstlisting}
+
+\begin{itemize}[noitemsep]
+    \item \texttt{cleanWs()}: Dọn workspace sau mỗi build để tiết kiệm disk
+    \item In thông báo kết quả (pass/fail) kèm branch name và build number
+\end{itemize}

@@ -1,0 +1,66 @@
+\section{Cấu hình Jenkins}
+
+\subsection{Cài đặt Jenkins trên AWS EC2}
+Jenkins được cài đặt trên AWS EC2 instance và truy cập qua \texttt{http://3.27.92.213:8080}.
+
+Các plugin cần thiết đã cài đặt:
+\begin{itemize}[noitemsep]
+    \item \textbf{GitHub Branch Source Plugin}: Hỗ trợ Multibranch Pipeline với GitHub
+    \item \textbf{Pipeline Plugin}: Hỗ trợ Jenkinsfile declarative pipeline
+    \item \textbf{JUnit Plugin}: Hiển thị kết quả test
+    \item \textbf{Credentials Binding Plugin}: Quản lý secrets (SonarQube token, Snyk token)
+    \item \textbf{Timestamps Plugin}: Hiển thị thời gian trong console output
+\end{itemize}
+
+% [Ảnh: Screenshot Jenkins Dashboard]
+
+\subsection{Cấu hình Tools}
+Trong Jenkins Global Tool Configuration:
+\begin{itemize}[noitemsep]
+    \item \textbf{JDK}: Cấu hình JDK-25 (OpenJDK 25)
+    \item \textbf{Maven}: Cấu hình Maven (Latest LTS)
+\end{itemize}
+
+% [Ảnh: Screenshot Jenkins Global Tool Configuration (JDK + Maven)]
+
+\subsection{Cấu hình Credentials}
+Các credentials được lưu trong Jenkins Credentials Store:
+\begin{table}[H]
+\centering
+\caption{Jenkins Credentials}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{ID} & \textbf{Loại} & \textbf{Mục đích} \\
+\hline
+\texttt{sonarqube-token} & Secret text & Xác thực SonarQube API \\
+\hline
+\texttt{snyk-token} & Secret text & Xác thực Snyk CLI \\
+\hline
+\end{tabular}
+\end{table}
+
+% [Ảnh: Screenshot Jenkins Credentials (ẩn giá trị)]
+
+\subsection{Tạo Multibranch Pipeline Job}
+Nhóm tạo job \texttt{yas-ci-pipeline} với loại \textbf{Multibranch Pipeline}:
+
+\begin{enumerate}[noitemsep]
+    \item \textbf{Branch Sources}: GitHub repository \texttt{tzin1401/yas}
+    \item \textbf{Discover branches}: Strategy ``Exclude branches that are also filed as PRs'' --- tránh build trùng lặp khi branch đã có PR
+    \item \textbf{Discover pull requests from origin}: Merging the pull request with the current target branch revision
+    \item \textbf{Build Configuration}: Jenkinsfile tại root của repository
+    \item \textbf{Scan Repository Triggers}: Tự động quét mỗi khi có webhook từ GitHub
+\end{enumerate}
+
+% [Ảnh: Screenshot Multibranch Pipeline Configuration - Branch Sources]
+% [Ảnh: Screenshot Multibranch Pipeline Configuration - Build Configuration]
+
+\subsection{Kết quả: Jenkins tracking branches và PRs}
+Sau khi cấu hình, Jenkins tự động phát hiện và tracking:
+\begin{itemize}[noitemsep]
+    \item \textbf{5 branches}: main, ci/setup-jenkins-pipeline, feature/media-tests, tri/tax-tests, test/ci-path-filter
+    \item \textbf{5 pull requests}: PR \#3, \#4, \#5, \#6, \#7
+\end{itemize}
+
+% [Ảnh: Screenshot Jenkins Branches tab]
+% [Ảnh: Screenshot Jenkins Pull Requests tab]
