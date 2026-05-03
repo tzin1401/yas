@@ -53,7 +53,17 @@ class CountryServiceTest {
             .code3("VNM")
             .build();
         
-        countryPostVm = new CountryPostVm("Vietnam", "VN", "VNM", true);
+        countryPostVm = CountryPostVm.builder()
+            .id("VN")
+            .name("Vietnam")
+            .code2("VN")
+            .code3("VNM")
+            .isBillingEnabled(true)
+            .isShippingEnabled(true)
+            .isCityEnabled(true)
+            .isZipCodeEnabled(true)
+            .isDistrictEnabled(true)
+            .build();
     }
 
     @Test
