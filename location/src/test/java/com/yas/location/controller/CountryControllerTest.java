@@ -1,7 +1,6 @@
 package com.yas.location.controller;
 
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,22 +32,23 @@ class CountryControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(countryController)
-                .setControllerAdvice(new ApiExceptionHandler())
-                .build();
+            .setControllerAdvice(new ApiExceptionHandler())
+            .build();
     }
 
     @Test
     void testListCountries_shouldReturnOk() throws Exception {
         when(countryService.findAllCountries()).thenReturn(Collections.emptyList());
         mockMvc.perform(get("/backoffice/countries"))
-                .andExpect(status().isOk());
+            .andExpect(status().isOk());
     }
 
     @Test
     void testGetPageableCountries_shouldReturnOk() throws Exception {
-        CountryListGetVm expected = new CountryListGetVm(Collections.emptyList(), 0, 10, 0, 0, true);
-        when(countryService.getPageableCountries(anyInt(), anyInt(), anyString())).thenReturn(expected);
+        CountryListGetVm expected =
+            new CountryListGetVm(Collections.emptyList(), 0, 10, 0, 0, true);
+        when(countryService.getPageableCountries(anyInt(), anyInt())).thenReturn(expected);
         mockMvc.perform(get("/backoffice/countries/paging"))
-                .andExpect(status().isOk());
+            .andExpect(status().isOk());
     }
 }

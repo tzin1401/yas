@@ -19,7 +19,6 @@ import com.yas.location.repository.StateOrProvinceRepository;
 import com.yas.location.viewmodel.address.AddressDetailVm;
 import com.yas.location.viewmodel.address.AddressGetVm;
 import com.yas.location.viewmodel.address.AddressPostVm;
-import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +28,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-public class AddressServiceTest {
+class AddressServiceTest {
 
     @Mock
     private AddressRepository addressRepository;
@@ -39,7 +38,7 @@ public class AddressServiceTest {
     private DistrictRepository districtRepository;
     @Mock
     private StateOrProvinceRepository stateOrProvinceRepository;
-    
+
     @InjectMocks
     private AddressService addressService;
 
@@ -50,18 +49,24 @@ public class AddressServiceTest {
 
     @BeforeEach
     void setUp() {
-        country = Country.builder().id("C1").name("country-1").build();
+        country = Country.builder().id(1L).name("country-1").code2("US").build();
         stateOrProvince = StateOrProvince.builder().id(1L).name("state-1").country(country).build();
-        district = District.builder().id(1L).name("district-1").stateOrProvince(stateOrProvince).build();
-        address1 = Address.builder().id(1L).city("city-1").district(district).build();
+        district = District.builder().id(1L).name("district-1").stateProvince(stateOrProvince).build();
+        address1 = Address.builder()
+            .id(1L)
+            .city("city-1")
+            .district(district)
+            .stateOrProvince(stateOrProvince)
+            .country(country)
+            .build();
     }
 
     @Test
     void getAddress_ValidId_ShouldReturnAddress() {
         when(addressRepository.findById(1L)).thenReturn(Optional.of(address1));
-        
+
         AddressDetailVm result = addressService.getAddress(1L);
-        
+
         assertNotNull(result);
         assertEquals("city-1", result.city());
     }
@@ -69,30 +74,39 @@ public class AddressServiceTest {
     @Test
     void getAddress_InvalidId_ShouldThrowNotFoundException() {
         when(addressRepository.findById(1L)).thenReturn(Optional.empty());
-        
+
         assertThrows(NotFoundException.class, () -> addressService.getAddress(1L));
     }
 
     @Test
-    void createAddress_ValidData_ShouldReturnAddress() {
-        AddressPostVm postVm = new AddressPostVm("name", "phone", "line1", "line2", "city", "zip", 1L, 1L, "C1");
-        
+    void createAddress_ValidData_ShouldReturnAddressGetVm() {
+        AddressPostVm postVm =
+            new AddressPostVm("name", "phone", "line1", "line2", "city", "zip", 1L, 1L, 1L);
+
         when(districtRepository.findById(1L)).thenReturn(Optional.of(district));
         when(stateOrProvinceRepository.findById(1L)).thenReturn(Optional.of(stateOrProvince));
-        when(countryRepository.findById("C1")).thenReturn(Optional.of(country));
-        when(addressRepository.saveAndFlush(any())).thenReturn(address1);
+        when(countryRepository.findById(1L)).thenReturn(Optional.of(country));
+        when(addressRepository.save(any(Address.class))).thenAnswer(inv -> {
+            Address a = inv.getArgument(0);
+            a.setId(1L);
+            a.setDistrict(district);
+            a.setStateOrProvince(stateOrProvince);
+            a.setCountry(country);
+            return a;
+        });
 
-        Address result = addressService.createAddress(postVm);
-        
+        AddressGetVm result = addressService.createAddress(postVm);
+
         assertNotNull(result);
+        assertEquals(1L, result.id());
     }
 
     @Test
     void deleteAddress_ValidId_ShouldSuccess() {
         when(addressRepository.findById(1L)).thenReturn(Optional.of(address1));
-        
+
         addressService.deleteAddress(1L);
-        
+
         verify(addressRepository).delete(address1);
     }
 }

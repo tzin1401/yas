@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.yas.commonlibrary.exception.ApiExceptionHandler;
 import com.yas.location.service.AddressService;
+import com.yas.location.viewmodel.address.AddressGetVm;
 import com.yas.location.viewmodel.address.AddressPostVm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,8 +37,8 @@ class AddressControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(addressController)
-                .setControllerAdvice(new ApiExceptionHandler())
-                .build();
+            .setControllerAdvice(new ApiExceptionHandler())
+            .build();
         objectWriter = new ObjectMapper().writer().withDefaultPrettyPrinter();
     }
 
@@ -52,17 +53,31 @@ class AddressControllerTest {
             .zipCode("zipCode")
             .districtId(1L)
             .stateOrProvinceId(1L)
-            .countryId("C1")
+            .countryId(1L)
             .build();
 
-        mockMvc.perform(post("/backoffice/addresses")
+        when(addressService.createAddress(any(AddressPostVm.class))).thenReturn(
+            AddressGetVm.builder()
+                .id(1L)
+                .contactName("contactName")
+                .phone("12345678")
+                .addressLine1("addressLine1")
+                .addressLine2("addressLine2")
+                .city("city")
+                .zipCode("zipCode")
+                .districtId(1L)
+                .stateOrProvinceId(1L)
+                .countryId(1L)
+                .build());
+
+        mockMvc.perform(post("/storefront/addresses")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(addressPostVm)))
-            .andExpect(status().isCreated());
+            .andExpect(status().isOk());
     }
 
     @Test
-    void testUpdateAddress_whenRequestIsValid_thenReturnOk() throws Exception {
+    void testUpdateAddress_whenRequestIsValid_thenReturnNoContent() throws Exception {
         AddressPostVm addressPostVm = AddressPostVm.builder()
             .contactName("contactName")
             .phone("12345678")
@@ -72,10 +87,10 @@ class AddressControllerTest {
             .zipCode("zipCode")
             .districtId(1L)
             .stateOrProvinceId(1L)
-            .countryId("C1")
+            .countryId(1L)
             .build();
 
-        mockMvc.perform(put("/backoffice/addresses/1")
+        mockMvc.perform(put("/storefront/addresses/1")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(addressPostVm)))
             .andExpect(status().isNoContent());
