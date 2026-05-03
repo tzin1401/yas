@@ -42,12 +42,15 @@ Luồng CI pipeline bao gồm 8 stages chính:
 \end{tabular}
 \end{table}
 
-\subsection{Hạ tầng}
+\subsection{Hạ tầng và Kiến trúc Build phân tán (Master-Agent)}
 \begin{itemize}[noitemsep]
-    \item \textbf{Jenkins Server}: AWS EC2 instance, truy cập tại \texttt{http://3.27.92.213:8080}
-    \item \textbf{SonarQube Server}: Cùng EC2 instance, port 9000
-    \item \textbf{Jenkins Version}: 2.555.1
-    \item \textbf{Executors}: 2 (chạy song song tối đa 2 builds)
-    \item \textbf{Build Discarder}: Giữ tối đa 10 builds gần nhất
-    \item \textbf{Timeout}: 60 phút mỗi build
+    \item \textbf{Jenkins Server (Master node)}: Đóng vai trò làm máy chủ trung tâm (Orchestrator). Nhiệm vụ duy nhất là tiếp nhận tín hiệu từ GitHub Webhook, lập lịch, quản lý cấu hình Pipeline, lưu trữ lịch sử build và phân phối tác vụ xuống các Agent.
+    \item \textbf{SonarQube Server}: Triển khai độc lập để phân tích chất lượng code của toàn bộ dự án.
+    \item \textbf{Distributed Agents (Cộng tác viên build)}: Toàn bộ quá trình checkout code, build, unit test và phân tích bảo mật được giao hoàn toàn cho 3 Agent thực thi song song:
+    \begin{itemize}[noitemsep]
+        \item \textbf{Agent-Tri}: Phụ trách xử lý và thực thi các build job.
+        \item \textbf{Agent-QVinh}: Phụ trách xử lý và thực thi các build job.
+        \item \textbf{Agent-TVinh}: Phụ trách xử lý và thực thi các build job.
+    \end{itemize}
+    \item \textbf{Lợi ích}: Phân tán tải công việc giúp ngăn chặn tình trạng thắt nút cổ chai (bottleneck) tại Master node, đồng thời giúp tăng tốc thời gian hoàn thành pipeline lên gấp nhiều lần.
 \end{itemize}
