@@ -16,11 +16,11 @@ Tài liệu này tóm tắt **trạng thái pipeline đã triển khai** trên J
 | 1 | **Checkout** | `checkout scm`, `git fetch origin main`, `chmod +x` cho script trong `ci/`. |
 | 2 | **Detect Changed Modules** | Chạy `ci/detect-changed-modules.sh` → biến `CHANGED_MODULES` (danh sách module, có thể gồm `common-library`). |
 | 3 | **Gitleaks – Secret Scan** | Quét secret; có baseline `gitleaks-baseline.json` nếu có — **phát hiện secret mới thì fail**. |
-| 4 | **Test** | `mvn … test jacoco:report -DskipITs` theo từng module đổi; post: **JUnit** + archive `jacoco.xml`. |
+| 4 | **Test** | `mvn … test jacoco:report -DskipITs` theo từng module đổi; post: **JUnit** + **recordCoverage** (hiển thị UI Coverage trên Jenkins). |
 | 5 | **Coverage Gate** | Với từng module service (trừ `common-library`): `ci/check-coverage.sh <module> <COVERAGE_THRESHOLD>` — ngưỡng mặc định **≥ 70%** dòng (LINE) trên báo cáo JaCoCo. |
 | 6 | **Build** | `mvn package -DskipTests` theo module đổi. |
-| 7 | **SonarQube – Analysis** | `mvn sonar:sonar` với `-pl`/`-am` cho module đổi; token qua credential `sonarqube-token`; `sonar.coverage.jacoco.xmlReportPaths` trỏ tới `target/site/jacoco/jacoco.xml`. |
-| 8 | **Snyk – Dependency Scan** | `snyk auth`, với mỗi module: `snyk test` (có retry giảm `--max-depth`) rồi `snyk monitor`; **exit code không chặn pipeline** (chỉ log). |
+| 7 | **SonarQube – Analysis & Quality Gate** | Sử dụng `withSonarQubeEnv` để phân tích mã và treo pipeline đợi webhook báo cáo kết quả thông qua lệnh `waitForQualityGate`. |
+| 8 | **Snyk – Dependency Scan** | Kiểm tra dependency tree với `-pl -am` để tránh lỗi nội suy POM, sau đó chạy `snyk test` và `snyk monitor` kèm `--maven-skip-wrapper`. Lỗi quét cấu hình không chặn pipeline. |
 
 ## 3. Điểm đã “ổn định” khi làm đồ án (để ghi trong báo cáo)
 
@@ -71,15 +71,14 @@ Script **không nhận tham số** từ `Jenkinsfile`. Logic chọn `base_ref`:
 
 Comment trong `Jenkinsfile` có đoạn “fetch origin main” để shallow clone đủ ref; **không** đồng nghĩa mọi build đều diff với `main`.
 
-### 6.3 Những thứ **không có** trong `Jenkinsfile` hiện tại
+### 6.3 Những tính năng Nâng cao đã tích hợp trong `Jenkinsfile`
 
-Đối chiếu file pipeline trong repo: **không** thấy các bước sau — **không nên** viết vào báo cáo như đã triển khai nếu chỉ dựa trên repo này:
+Trong file pipeline thực tế, nhóm đã cấu hình thành công các tính năng nâng cao (rất nên ghi vào báo cáo để được điểm cao):
 
-- Stage **`waitForQualityGate`** / plugin Quality Gate sau Sonar
-- **`withSonarQubeEnv(...)`** — chỉ dùng `withCredentials` + `mvn sonar:sonar` + `-Dsonar.host.url` / token
-- **`recordCoverage`** (Coverage Plugin Jenkins) — test chỉ dùng `junit` + archive `jacoco.xml`; gate coverage bằng **`ci/check-coverage.sh`**
-- **`chmod +x mvnw`** hoặc **`--maven-skip-wrapper`** trong Snyk (pipeline gọi `snyk` với `--file=<module>/pom.xml`)
-- File **`ci/verify-ci-tools.sh`** — không tồn tại trong workspace repo hiện tại
+- **`waitForQualityGate`**: Chờ Quality Gate từ SonarQube trả webhook về Jenkins.
+- **`withSonarQubeEnv('sonar-server')`**: Liên kết trực tiếp biến môi trường SonarQube Server của Jenkins System.
+- **`recordCoverage`** (Coverage Plugin Jenkins): Đọc file `jacoco.xml` và vẽ biểu đồ + highlight code từng dòng trực tiếp trên giao diện Jenkins.
+- Sử dụng **`-pl -am`** để xử lý bài toán Monorepo dependencies khi chạy Snyk CLI (giải quyết triệt để lỗi Exit code -13).
 
 ### 6.4 JaCoCo “prepare-agent” trong `pom.xml`
 
