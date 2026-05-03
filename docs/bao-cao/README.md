@@ -26,6 +26,10 @@ Nhánh này dùng **chỉ cho nội dung báo cáo** (Markdown/LaTeX, ảnh minh
 
 Chụp xong đặt ảnh vào `docs/bao-cao/screenshots/<tên-thành-viên>/` đúng tên file trong từng guide.
 
+## Tóm tắt pipeline (để copy vào Word/LaTeX)
+
+Xem **`CI-PIPELINE-NOI-DUNG-BAO-CAO.md`** — mô tả các stage Jenkins, Gitleaks, coverage gate, SonarQube, Snyk và các điểm đã ổn định khi làm đồ án (khớp `Jenkinsfile` + `ci/*.sh`).
+
 ## Overleaf / LaTeX
 
 Nếu dùng template LaTeX riêng, có thể đặt file `.tex` trong `docs/bao-cao/` (ví dụ `main.tex`) và **không** đưa PDF build ra git (thêm vào `.gitignore` nếu cần).

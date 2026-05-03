@@ -66,9 +66,9 @@
 - **Tên file**: `10-sonarqube-detail.png`
 
 ### 3.3 Console output - SonarQube
-- Vào Jenkins → bất kỳ build nào → Console Output
-- Tìm (Ctrl+F): `ANALYSIS SUCCESSFUL`
-- Chụp đoạn console thấy dòng này
+- Vào Jenkins → build đã chạy stage SonarQube → Console Output
+- Tìm (Ctrl+F): `ANALYSIS SUCCESSFUL` hoặc log `mvn sonar:sonar` / `BUILD SUCCESS` sau phân tích
+- Chụp đoạn console thấy kết quả phân tích SonarQube
 - **Tên file**: `11-sonarqube-console.png`
 
 ---
@@ -86,8 +86,8 @@
 ## 5. Pipeline Stage View
 
 ### 5.1 Stage View - build thành công
-- Vào Jenkins → `yas-ci-pipeline` → PR-7 (hoặc PR-6) → build #1
-- Chụp trang Stages (thấy tất cả 8 stages với màu xanh/đỏ)
+- Vào Jenkins → `yas-ci-pipeline` → branch/PR có build gần nhất → chọn build thành công
+- Chụp trang Stages (thấy đủ các stage: Checkout → Detect → Gitleaks → Test → Coverage Gate → Build → SonarQube → Snyk — **8 stage**)
 - **Tên file**: `13-pipeline-stages-pass.png`
 
 ### 5.2 Stage View - build thất bại (nếu có)
