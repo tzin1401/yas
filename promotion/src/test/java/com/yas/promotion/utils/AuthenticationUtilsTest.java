@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -26,7 +27,9 @@ class AuthenticationUtilsTest {
         Jwt jwt = mock(Jwt.class);
         when(jwt.getSubject()).thenReturn("user1");
         JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
 
         String userId = AuthenticationUtils.extractUserId();
 
@@ -36,7 +39,9 @@ class AuthenticationUtilsTest {
     @Test
     void extractUserId_shouldThrowAccessDeniedException_whenAnonymous() {
         AnonymousAuthenticationToken authentication = new AnonymousAuthenticationToken("key", "anonymous", AuthorityUtils.createAuthorityList("ROLE_ANONYMOUS"));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
 
         assertThrows(AccessDeniedException.class, AuthenticationUtils::extractUserId);
     }
@@ -46,7 +51,9 @@ class AuthenticationUtilsTest {
         Jwt jwt = mock(Jwt.class);
         when(jwt.getTokenValue()).thenReturn("token_value");
         JwtAuthenticationToken authentication = new JwtAuthenticationToken(jwt);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(authentication);
+        SecurityContextHolder.setContext(context);
 
         String jwtValue = AuthenticationUtils.extractJwt();
 

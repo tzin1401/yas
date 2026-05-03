@@ -51,6 +51,11 @@ class ProductServiceTest {
         when(serviceUrlConfig.product()).thenReturn(PRODUCT_URL);
     }
 
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
+
     @Test
     void testGetProductByIds_ifNormalCase_returnProductVms() {
 
