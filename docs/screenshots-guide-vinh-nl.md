@@ -44,6 +44,12 @@ Chi tiết kỹ thuật: `docs/bao-cao/CI-PIPELINE-NOI-DUNG-BAO-CAO.md`.
 - Chụp rule áp dụng cho `main`: yêu cầu review, status checks, cấm force-push (nội dung hiển thị trên màn hình).
 - **Tên file:** `02-github-rulesets-main.png`
 
+### 1.2b Minh chứng: Bị từ chối khi Push trực tiếp lên Main (Mới bổ sung)
+
+- Cố tình gõ lệnh `git push origin main` dưới terminal local.
+- Chụp ảnh terminal báo lỗi `protected branch hook declined` hoặc tương tự.
+- **Tên file:** `02b-github-push-main-rejected.png`
+
 ### 1.3 Webhook tới Jenkins
 
 - **Settings** → **Webhooks**
@@ -83,6 +89,12 @@ Vào job multibranch (ví dụ `yas-ci-pipeline`) → chọn **branch/PR** → b
 - Ctrl+F: `Gitleaks scan PASSED` hoặc `>>> Gitleaks scan PASSED`.
 - **Tên file:** `08-jenkins-console-gitleaks-pass.png`
 
+### 3.1b Gitleaks fail (Mới bổ sung)
+
+- Chụp ảnh console một build cố tình tạo lỗi rò rỉ (ví dụ push 1 dummy AWS token).
+- Tìm log báo `leak detected` và báo đỏ stage Gitleaks.
+- **Tên file:** `08b-jenkins-console-gitleaks-fail.png`
+
 ### 3.2 Detect Changed Modules
 
 - Ctrl+F: `Modules selected for CI:` (và dòng `echo` ngay sau).
@@ -97,4 +109,4 @@ Vào job multibranch (ví dụ `yas-ci-pipeline`) → chọn **branch/PR** → b
 
 ## Tổng số ảnh (mục tiêu)
 
-**10 file** (`01` … `10`) như bảng trên. Có thể bớt ảnh webhook delivery nếu GitHub không hiển thị — giữ tối thiểu ảnh webhook **list**.
+**12 file** (`01` … `10`, cộng thêm `02b`, `08b`). Có thể bớt ảnh webhook delivery nếu GitHub không hiển thị — giữ tối thiểu ảnh webhook **list**.

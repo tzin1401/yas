@@ -82,6 +82,12 @@ Trên **Stage View** / Blue Ocean, thứ tự kỳ vọng:
 - Chụp danh sách: thấy ID **`sonarqube-token`**, **`snyk-token`** (không mở chi tiết chứa secret).
 - **Tên file:** `08-jenkins-credentials-ids.png`
 
+### 2.6 SonarQube servers (Mới bổ sung)
+
+- **Manage Jenkins** → **System** → cuộn đến phần **SonarQube servers**.
+- Chụp màn hình cấu hình URL và Server authentication token để minh chứng Jenkins được liên kết thành công với Sonar.
+- **Tên file:** `08b-jenkins-system-sonarqube-server.png`
+
 ---
 
 ## 3. SonarQube
@@ -102,14 +108,28 @@ Trên **Stage View** / Blue Ocean, thứ tự kỳ vọng:
 - Ctrl+F: `sonar:sonar` và/hoặc `BUILD SUCCESS` ngay sau bước Sonar; có thể có `ANALYSIS SUCCESSFUL` tùy phiên bản scanner.
 - **Tên file:** `11-jenkins-console-sonarqube.png`
 
+### 3.4 Webhooks trả kết quả về Jenkins (Mới bổ sung)
+
+- Trên SonarQube → **Project Settings** → **Webhooks**.
+- Chụp màn hình cấu hình Webhook trỏ về Jenkins (URL dạng `http://<jenkins>/sonarqube-webhook/`).
+- **Tên file:** `11b-sonarqube-webhook.png`
+
 ---
 
-## 4. Snyk — Console
+## 4. Snyk — Console & Web (Mới bổ sung)
+
+### 4.1 Console Jenkins — stage Snyk
 
 - **Cùng** hoặc build khác có stage **Snyk – Dependency Scan**.
 - Ctrl+F: `Snyk scanning` hoặc `>>> Snyk scanning`.
 - Chụp đoạn có `snyk test` / `snyk monitor` và exit message (pipeline có thể **tiếp tục** dù Snyk báo lỗi — đúng thiết kế `returnStatus` trong `Jenkinsfile`).
 - **Tên file:** `12-jenkins-console-snyk.png`
+
+### 4.2 Giao diện Snyk Web (Mới bổ sung)
+
+- Đăng nhập vào trang quản lý `app.snyk.io`.
+- Chụp màn hình hiển thị dự án YAS với các thông tin lỗi Vulnerability (High, Medium, Low...) do Snyk quét được.
+- **Tên file:** `12b-snyk-web-dashboard.png`
 
 ---
 
@@ -130,4 +150,4 @@ Trên **Stage View** / Blue Ocean, thứ tự kỳ vọng:
 
 ## Tổng số ảnh
 
-**~14 file** (`01` … `14`), trong đó `14` là tuỳ chọn.
+**~17 file** (`01` … `14`, cộng thêm `08b`, `11b`, `12b`), trong đó `14` là tuỳ chọn.

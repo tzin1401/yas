@@ -80,10 +80,18 @@ Vào `yas-ci-pipeline` → **đúng branch/PR** đã chọn ở mục 1 → buil
 
 ## 4. Jenkins — Coverage Gate (stage Coverage Gate)
 
+### 4.1 Coverage Gate Pass
+
 - Cùng **Console Output** → Ctrl+F: **`line coverage:`**
 - Chụp dòng kiểu: `Module <tên-module> line coverage: XX.XX% (required >= 70%)`  
   (ngưỡng lấy từ biến `COVERAGE_THRESHOLD` trong `Jenkinsfile`, mặc định **70**.)
 - **Tên file:** `10-jenkins-console-coverage-gate.png`
+
+### 4.2 Coverage Gate Fail (Mới bổ sung)
+
+- Cố tình mở PR chứa code chưa được test hoặc lấy log build bị tạch coverage (ví dụ `< 70%`).
+- Chụp log ghi rõ dòng lỗi: `Coverage gate failed cho module: ... < 70%` để minh chứng Pipeline có chặn lại thực sự.
+- **Tên file:** `10b-jenkins-console-coverage-fail.png`
 
 ---
 
@@ -98,5 +106,5 @@ Nếu báo cáo muốn nối JaCoCo với Sonar:
 
 ## Tổng số ảnh
 
-- **Tối thiểu khuyến nghị:** `01`–`03`, `07`–`10` (**8 ảnh**) cho một PR/build.
-- **Đầy đủ** với PR thứ hai + Sonar optional: tới **~11 ảnh** như trên.
+- **Tối thiểu khuyến nghị:** `01`–`03`, `07`–`10` (**8 ảnh**) cho một PR/build (cộng thêm `10b`).
+- **Đầy đủ** với PR thứ hai + Sonar optional: tới **~12 ảnh** như trên.
