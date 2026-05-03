@@ -67,8 +67,7 @@ class OrderServiceTest {
         when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
 
         OrderExistsByProductAndUserGetVm expected = new OrderExistsByProductAndUserGetVm(true);
-        when(responseSpec.toEntity(any(ParameterizedTypeReference.class)))
-                .thenReturn(ResponseEntity.ok(expected));
+        when(responseSpec.body(OrderExistsByProductAndUserGetVm.class)).thenReturn(expected);
 
         OrderExistsByProductAndUserGetVm result = orderService.checkOrderExistsByProductAndUserWithStatus(1L);
 

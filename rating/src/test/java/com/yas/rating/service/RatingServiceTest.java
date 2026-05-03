@@ -101,7 +101,7 @@ class RatingServiceTest {
         when(customerService.getCustomer()).thenReturn(new CustomerVm(userId, "user", "Cuong", "Tran"));
         
         Rating savedRating = ratingList.get(0);
-        when(ratingRepository.saveAndFlush(any(Rating.class))).thenReturn(savedRating);
+        when(ratingRepository.save(any(Rating.class))).thenReturn(savedRating);
 
         RatingPostVm postVm = RatingPostVm.builder().content("cmt").star(4).productId(1L).build();
         RatingVm result = ratingService.createRating(postVm);
