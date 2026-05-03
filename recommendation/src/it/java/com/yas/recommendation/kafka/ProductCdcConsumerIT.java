@@ -379,5 +379,4 @@ public class ProductCdcConsumerIT extends CdcConsumerIT<ProductMsgKey, ProductCd
         }
         return floatArray;
     }
-} }
 }
