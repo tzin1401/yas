@@ -13,7 +13,8 @@
 //  4. Test + JaCoCo report (chỉ modules thay đổi, skip Integration Tests)
 //  5. Coverage Gate (≥ 70%, graceful skip nếu không có code)
 //  6. Build (chỉ modules thay đổi)
-//  7. SonarQube Analysis (chỉ modules thay đổi)
+//  7. SonarQube Analysis (withSonarQubeEnv — liên kết Quality Gate)
+//  7b. SonarQube Quality Gate (waitForQualityGate — cần webhook Sonar → Jenkins)
 //  8. Snyk Dependency Scan (chỉ modules thay đổi)
 // ============================================================
 
@@ -33,10 +34,12 @@ pipeline {
     }
 
     environment {
-        COVERAGE_THRESHOLD   = '70'
-        SONAR_HOST_URL       = 'http://3.27.92.213:9000'
-        MAVEN_OPTS           = '-Xmx512m -XX:MaxMetaspaceSize=256m'
-        GITLEAKS_EXPECTED    = '8.18.4'
+        COVERAGE_THRESHOLD       = '70'
+        SONAR_HOST_URL           = 'http://3.27.92.213:9000'
+        // Phải trùng tên SonarQube server trong Manage Jenkins → System (SonarQube installations).
+        SONARQUBE_INSTALLATION   = 'sonar-server'
+        MAVEN_OPTS               = '-Xmx512m -XX:MaxMetaspaceSize=256m'
+        GITLEAKS_EXPECTED        = '8.18.4'
     }
 
     stages {
@@ -111,10 +114,34 @@ pipeline {
             }
             post {
                 always {
+                    // 1. Thu thập báo cáo kết quả các case Test (JUnit)
                     junit allowEmptyResults: true,
                           testResults: '**/target/surefire-reports/*.xml,**/target/failsafe-reports/*.xml'
-                    archiveArtifacts allowEmptyArchive: true,
-                                     artifacts: '**/target/site/jacoco/jacoco.xml'
+
+                    // 2. JaCoCo: biểu đồ / source painting trên UI — không qualityGates ở đây (gate 70% ở stage Coverage Gate + ci/check-coverage.sh).
+                    recordCoverage(
+                        tools: [[parser: 'JACOCO', pattern: '**/target/site/jacoco/jacoco.xml']],
+                        id: 'jacoco',
+                        name: 'JaCoCo Coverage',
+
+                        // Khai báo đường dẫn để hiển thị mã nguồn (fix lỗi Source file not found)
+                        sourceDirectories: [
+                            [path: 'common-library/src/main/java'],
+                            [path: 'payment/src/main/java'],
+                            [path: 'media/src/main/java'],
+                            [path: 'cart/src/main/java'],
+                            [path: 'catalog/src/main/java'],
+                            [path: 'customer/src/main/java'],
+                            [path: 'inventory/src/main/java'],
+                            [path: 'location/src/main/java'],
+                            [path: 'order/src/main/java'],
+                            [path: 'product/src/main/java'],
+                            [path: 'promotion/src/main/java'],
+                            [path: 'rating/src/main/java'],
+                            [path: 'search/src/main/java'],
+                            [path: 'tax/src/main/java']
+                        ]
+                    )
                 }
             }
         }
@@ -157,28 +184,53 @@ pipeline {
 
         // ══════════════════════════════════════════════════════
         // STAGE 7 – SonarQube Analysis
-        // Override sonar.host.url → AWS server (không dùng SonarCloud)
+        // withSonarQubeEnv: Jenkins liên kết lần phân tích với server → hỗ trợ Quality Gate + badge.
         // ══════════════════════════════════════════════════════
         stage('SonarQube – Analysis') {
             steps {
-                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    script {
-                        def modules = env.CHANGED_MODULES.split(',')
-                        def serviceModules = modules.findAll { it != 'common-library' }
+                script {
+                    def modules = env.CHANGED_MODULES.split(',')
+                    def serviceModules = modules.findAll { it != 'common-library' }
 
-                        if (serviceModules.isEmpty()) {
-                            echo "SonarQube: skip"
-                        } else {
-                            def plArg = serviceModules.join(',')
-                            echo "SonarQube: ${plArg}"
-                            sh """
-                                mvn sonar:sonar \
-                                  -pl ${plArg} -am \
-                                  -Dsonar.host.url=${SONAR_HOST_URL} \
-                                  -Dsonar.token=${SONAR_TOKEN} \
-                                  -Dsonar.organization= \
-                                  -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-                            """
+                    if (serviceModules.isEmpty()) {
+                        echo "SonarQube: skip"
+                    } else {
+                        def plArg = serviceModules.join(',')
+                        echo "SonarQube: ${plArg}"
+                        withSonarQubeEnv("${env.SONARQUBE_INSTALLATION}") {
+                            withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                                sh """
+                                    mvn sonar:sonar \\
+                                      -pl ${plArg} -am \\
+                                      -Dsonar.host.url=${SONAR_HOST_URL} \\
+                                      -Dsonar.token=${SONAR_TOKEN} \\
+                                      -Dsonar.organization= \\
+                                      -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+                                """
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ══════════════════════════════════════════════════════
+        // STAGE 7b – SonarQube Quality Gate (nhận kết quả từ Sonar)
+        // Cần webhook SonarQube → Jenkins (Administration → Webhooks). abortPipeline: false = không đỏ build khi QG fail.
+        // ══════════════════════════════════════════════════════
+        stage('SonarQube – Quality Gate') {
+            steps {
+                script {
+                    def modules = env.CHANGED_MODULES.split(',')
+                    def serviceModules = modules.findAll { it != 'common-library' }
+
+                    if (serviceModules.isEmpty()) {
+                        echo "SonarQube Quality Gate: skip"
+                    } else {
+                        withSonarQubeEnv("${env.SONARQUBE_INSTALLATION}") {
+                            timeout(time: 15, unit: 'MINUTES') {
+                                waitForQualityGate abortPipeline: false
+                            }
                         }
                     }
                 }
