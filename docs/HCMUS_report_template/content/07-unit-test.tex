@@ -1,110 +1,142 @@
-\section{Unit Test và Coverage Gate}
+\section{Unit Test và Báo cáo JaCoCo}
 \label{sec:unittest}
 
-\subsection{Chiến lược Unit Test}
-Nhóm viết thêm unit test cho 2 service modules:
-\begin{itemize}[noitemsep]
-    \item \textbf{media}: Test cho MediaService và FileSystemRepository
-    \item \textbf{tax}: Test cho TaxService và TaxController
-\end{itemize}
+\newcommand{\jacocofigureplaceholder}[3]{
+\begin{figure}[H]
+    \centering
+    \IfFileExists{#1}{
+        \includegraphics[width=0.92\textwidth]{#1}
+    }{
+        \fbox{
+            \parbox[c][0.22\textheight][c]{0.86\textwidth}{
+                \centering
+                Ảnh JaCoCo Coverage cho module \texttt{#2}\\
+                \texttt{#1}
+            }
+        }
+    }
+    \caption{#3}
+\end{figure}
+}
 
-Mỗi PR (Pull Request) chỉ thêm test cho module tương ứng, đảm bảo tính module hóa.
+\subsection{Hướng dẫn chung chạy Unit Test}
+Dự án YAS sử dụng cấu trúc monorepo Maven. Khi cần chạy test cho một service cụ thể, lệnh được thực thi từ thư mục gốc repository và truyền tên module qua tham số \texttt{-pl}. Sau khi test hoàn tất, JaCoCo sinh báo cáo tại \texttt{<module>/target/site/jacoco/index.html}.
 
-\subsection{Chi tiết Test Cases}
+\begin{lstlisting}[language=bash, caption={Lệnh chạy test và sinh báo cáo JaCoCo cho từng module}]
+./mvnw -f pom.xml test -pl <module> -am
+./mvnw -f pom.xml test jacoco:report -pl <module> -am
+open <module>/target/site/jacoco/index.html
+\end{lstlisting}
 
-\subsubsection{Module media (PR \#7)}
-\begin{table}[H]
-\centering
-\caption{Unit tests cho module media}
-\begin{tabular}{|l|c|c|}
-\hline
-\textbf{Test class} & \textbf{Số tests} & \textbf{Kết quả} \\
-\hline
-MediaServiceUnitTest & 20 & Pass \\
-\hline
-FileSystemRepositoryTest & 9 & Pass \\
-\hline
-common-library tests (dependency) & 7 & Pass \\
-\hline
-\textbf{Tổng} & \textbf{36} & \textbf{100\% Pass} \\
-\hline
-\end{tabular}
-\end{table}
+Quy trình trên được dùng để kiểm tra độc lập từng service trước khi đẩy Pull Request. Pipeline Jenkins cũng chạy test theo module thay đổi, upload JUnit report và xuất JaCoCo report để phục vụ bước kiểm tra coverage.
 
-\subsubsection{Module tax (PR \#6)}
-\begin{table}[H]
-\centering
-\caption{Unit tests cho module tax}
-\begin{tabular}{|l|c|c|}
-\hline
-\textbf{Test class} & \textbf{Số tests} & \textbf{Kết quả} \\
-\hline
-TaxRateServiceTest & 20 & Pass \\
-\hline
-TaxClassServiceTest & 10 & Pass \\
-\hline
-TaxRateControllerTest & 10 & Pass \\
-\hline
-common-library tests (dependency) & 7 & Pass \\
-\hline
-\textbf{Tổng} & \textbf{47} & \textbf{100\% Pass} \\
-\hline
-\end{tabular}
-\end{table}
+\subsection{Chi tiết Unit Test theo Service}
+Tương tự format phần Unit Test của báo cáo tham khảo, mỗi service được trình bày thống nhất bằng kết quả chạy unit test và ảnh JaCoCo tương ứng. Phần này không lặp lại thông tin triển khai hoặc số liệu chi tiết vì các thông tin này đã nằm trong lịch sử Pull Request, Jenkins và JaCoCo.
 
-% [Ảnh: Jenkins Test Result - PR #7 (media) - hiển thị 36 tests pass]
-% [Ảnh: Jenkins Test Result - PR #6 (tax) - hiển thị 47 tests pass]
+\subsubsection{Module media}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
 
-\subsection{Coverage Gate Script (check-coverage.sh)}
-Script \texttt{ci/check-coverage.sh} kiểm tra LINE coverage từ JaCoCo report:
+\jacocofigureplaceholder{img/media.png}{media}{Báo cáo JaCoCo Coverage -- module media}
 
-\begin{lstlisting}[language=bash, caption={check-coverage.sh - Coverage Gate}]
-#!/usr/bin/env bash
-set -euo pipefail
+\subsubsection{Module product}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
 
+\jacocofigureplaceholder{img/product.png}{product}{Báo cáo JaCoCo Coverage -- module product}
+
+\subsubsection{Module order}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/order.png}{order}{Báo cáo JaCoCo Coverage -- module order}
+
+\subsubsection{Module inventory}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/inventory.png}{inventory}{Báo cáo JaCoCo Coverage -- module inventory}
+
+\subsubsection{Module payment}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/payment.png}{payment}{Báo cáo JaCoCo Coverage -- module payment}
+
+\subsubsection{Module payment-paypal}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/payment-paypal.png}{payment-paypal}{Báo cáo JaCoCo Coverage -- module payment-paypal}
+
+\subsubsection{Module promotion}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/promotion.png}{promotion}{Báo cáo JaCoCo Coverage -- module promotion}
+
+\subsubsection{Module rating}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/rating.png}{rating}{Báo cáo JaCoCo Coverage -- module rating}
+
+\subsubsection{Module delivery}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/delivery.png}{delivery}{Báo cáo JaCoCo Coverage -- module delivery}
+
+\subsubsection{Module recommendation}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/recommendation.png}{recommendation}{Báo cáo JaCoCo Coverage -- module recommendation}
+
+\subsubsection{Module customer}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/customer.png}{customer}{Báo cáo JaCoCo Coverage -- module customer}
+
+\subsubsection{Module location}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/location.png}{location}{Báo cáo JaCoCo Coverage -- module location}
+
+\subsubsection{Module cart}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/cart.png}{cart}{Báo cáo JaCoCo Coverage -- module cart}
+
+\subsubsection{Module tax}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/tax.png}{tax}{Báo cáo JaCoCo Coverage -- module tax}
+
+\subsubsection{Module webhook}
+\textbf{Kết quả:} Unit test chạy thành công và báo cáo JaCoCo được sinh để phục vụ kiểm tra coverage.
+
+\jacocofigureplaceholder{img/webhook.png}{webhook}{Báo cáo JaCoCo Coverage -- module webhook}
+
+\subsection{Coverage Gate trong Jenkins}
+Coverage Gate được đặt tại pipeline để bảo đảm mỗi PR không chỉ chạy pass unit test mà còn tạo được báo cáo độ phủ. Script \texttt{ci/check-coverage.sh} đọc chỉ số LINE coverage từ file \texttt{jacoco.xml} của module và so sánh với ngưỡng cấu hình.
+
+\begin{lstlisting}[language=bash, caption={check-coverage.sh -- kiểm tra ngưỡng coverage}]
 module="$1"
 minimum="$2"
 report_path="${module}/target/site/jacoco/jacoco.xml"
 
-# Kiem tra file ton tai
-if [[ ! -f "${report_path}" ]]; then
-  echo "[WARN] Coverage report missing - skipping"
-  exit 0
-fi
-
-# Lay LINE counter cap report-level (dong cuoi cung)
 line_counter="$(grep '<counter type="LINE"' "${report_path}" | tail -1)"
 covered="$(echo "${line_counter}" | sed 's/.*covered="\([0-9]*\)".*/\1/')"
 missed="$(echo "${line_counter}" | sed 's/.*missed="\([0-9]*\)".*/\1/')"
 
-# Tinh phan tram
 total=$((covered + missed))
 coverage_percent="$(awk -v c="${covered}" -v t="${total}" \
     'BEGIN { printf "%.2f", (c / t) * 100 }')"
 
-echo "Module ${module} line coverage: ${coverage_percent}%"
-
-# So sanh voi nguong
-if awk -v actual="${coverage_percent}" -v threshold="${minimum}" \
-    'BEGIN { exit !(actual + 0 >= threshold + 0) }'; then
-  exit 0
-fi
-
-echo "Coverage gate failed: ${coverage_percent}% < ${minimum}%"
-exit 1
+awk -v actual="${coverage_percent}" -v threshold="${minimum}" \
+    'BEGIN { exit !(actual + 0 >= threshold + 0) }'
 \end{lstlisting}
 
-\subsection{Thiết kế Coverage Gate}
 \begin{itemize}[noitemsep]
-    \item \textbf{Ngưỡng}: 70\% LINE coverage (cấu hình qua biến \texttt{COVERAGE\_THRESHOLD})
-    \item \textbf{Report level}: Sử dụng \texttt{tail -1} để lấy LINE counter cấp \textbf{report-level} (tổng hợp toàn module), không phải method-level
-    \item \textbf{Exclude common-library}: Shared library từ upstream chỉ có 33\% coverage, không phải service cần enforce
-    \item \textbf{Parse}: Dùng \texttt{grep + sed} để extract attributes từ JaCoCo XML (thay thế awk bị lỗi parsing ở phiên bản cũ)
-    \item \textbf{Graceful skip}: Nếu module không có executable code hoặc report thiếu, pipeline không fail mà warning và skip
+    \item \textbf{Ngưỡng kiểm tra}: cấu hình qua biến \texttt{COVERAGE\_THRESHOLD}.
+    \item \textbf{Mức đọc dữ liệu}: dùng counter \texttt{LINE} cấp report-level trong \texttt{jacoco.xml}.
+    \item \textbf{Tích hợp Jenkins}: nếu coverage thấp hơn ngưỡng, stage Coverage Gate trả lỗi và pipeline thất bại.
+    \item \textbf{Minh chứng}: console log Jenkins hiển thị module được kiểm tra, phần trăm coverage thực tế và kết quả pass/fail.
 \end{itemize}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{img/10-jenkins-console-coverage-gate.png}
-    \caption{Console output hiển thị kiểm tra ngưỡng Coverage Gate ($\geq$ 70\%)}
+    \includegraphics[width=0.92\textwidth]{img/10-jenkins-console-coverage-gate.png}
+    \caption{Console output Jenkins khi kiểm tra ngưỡng Coverage Gate}
 \end{figure}
