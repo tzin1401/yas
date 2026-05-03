@@ -19,6 +19,7 @@ import com.yas.location.repository.StateOrProvinceRepository;
 import com.yas.location.viewmodel.address.AddressDetailVm;
 import com.yas.location.viewmodel.address.AddressGetVm;
 import com.yas.location.viewmodel.address.AddressPostVm;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -108,5 +109,29 @@ class AddressServiceTest {
         addressService.deleteAddress(1L);
 
         verify(addressRepository).delete(address1);
+    }
+
+    @Test
+    void updateAddress_ValidData_ShouldSave() {
+        AddressPostVm postVm =
+            new AddressPostVm("n", "p", "l1", "l2", "c", "z", 1L, 1L, 1L);
+        when(addressRepository.findById(1L)).thenReturn(Optional.of(address1));
+        when(districtRepository.findById(1L)).thenReturn(Optional.of(district));
+        when(stateOrProvinceRepository.findById(1L)).thenReturn(Optional.of(stateOrProvince));
+        when(countryRepository.findById(1L)).thenReturn(Optional.of(country));
+
+        addressService.updateAddress(1L, postVm);
+
+        verify(addressRepository).save(any(Address.class));
+    }
+
+    @Test
+    void getAddressList_ShouldReturnDetails() {
+        when(addressRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(address1));
+
+        List<AddressDetailVm> list = addressService.getAddressList(List.of(1L));
+
+        assertEquals(1, list.size());
+        assertEquals("city-1", list.getFirst().city());
     }
 }

@@ -4,9 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.yas.commonlibrary.exception.DuplicatedException;
+import com.yas.commonlibrary.exception.NotFoundException;
 import com.yas.location.mapper.CountryMapper;
 import com.yas.location.model.Country;
 import com.yas.location.repository.CountryRepository;
@@ -14,6 +16,7 @@ import com.yas.location.viewmodel.country.CountryListGetVm;
 import com.yas.location.viewmodel.country.CountryPostVm;
 import com.yas.location.viewmodel.country.CountryVm;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -95,5 +98,53 @@ class CountryServiceTest {
         when(countryRepository.existsByCode2IgnoreCase("TS")).thenReturn(true);
 
         assertThrows(DuplicatedException.class, () -> countryService.create(postVm));
+    }
+
+    @Test
+    void findById_ShouldReturnVm() {
+        when(countryRepository.findById(1L)).thenReturn(Optional.of(country1));
+        when(countryMapper.toCountryViewModelFromCountry(country1)).thenReturn(CountryVm.fromModel(country1));
+
+        CountryVm result = countryService.findById(1L);
+
+        assertEquals("country-1", result.name());
+    }
+
+    @Test
+    void findById_WhenMissing_ShouldThrow() {
+        when(countryRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(NotFoundException.class, () -> countryService.findById(99L));
+    }
+
+    @Test
+    void update_ValidData_ShouldSave() {
+        CountryPostVm postVm =
+            new CountryPostVm("x", "TS", "new-name", "USA", true, true, true, true, true);
+        Country existing = Country.builder().id(1L).name("old").code2("O2").code3("O3").build();
+        when(countryRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(countryRepository.existsByNameIgnoreCaseAndIdNot("new-name", 1L)).thenReturn(false);
+        when(countryRepository.existsByCode2IgnoreCaseAndIdNot("TS", 1L)).thenReturn(false);
+
+        countryService.update(postVm, 1L);
+
+        verify(countryMapper).toCountryFromCountryPostViewModel(existing, postVm);
+        verify(countryRepository).save(existing);
+    }
+
+    @Test
+    void delete_WhenExists_ShouldDeleteById() {
+        when(countryRepository.existsById(1L)).thenReturn(true);
+
+        countryService.delete(1L);
+
+        verify(countryRepository).deleteById(1L);
+    }
+
+    @Test
+    void delete_WhenMissing_ShouldThrow() {
+        when(countryRepository.existsById(1L)).thenReturn(false);
+
+        assertThrows(NotFoundException.class, () -> countryService.delete(1L));
     }
 }
