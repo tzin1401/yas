@@ -20,14 +20,14 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Quy trình làm việc với Git}{4}{subsection.3.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {4}Cấu hình máy chủ và Môi trường hệ thống}{4}{section.4}\protected@file@percent }
 \newlabel{sec:cau-hinh-server}{{4}{4}{Cấu hình máy chủ và Môi trường hệ thống}{section.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}1. Khởi tạo máy chủ trên AWS (EC2)}{5}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Khởi tạo máy chủ trên AWS (EC2)}{5}{subsection.4.1}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Danh sách các máy chủ EC2 phục vụ hệ thống CI/CD}}{5}{figure.1}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Thiết lập quy tắc Inbound rules của Security Group}}{5}{figure.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}2. Cài đặt và Quản trị môi trường Docker}{5}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Cài đặt và Quản trị môi trường Docker}{5}{subsection.4.2}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {1}Cài đặt Docker trên Ubuntu Server}{6}{lstlisting.1}\protected@file@percent }
 \@writefile{lol}{\contentsline {lstlisting}{\numberline {2}Tệp cấu hình docker-compose.yml tiêu chuẩn}{6}{lstlisting.2}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Danh sách các container dịch vụ đang hoạt động ổn định}}{7}{figure.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}3. Cấu hình tích hợp hệ thống (System Integration)}{7}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Cấu hình tích hợp hệ thống (System Integration)}{7}{subsection.4.3}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces URL Webhook trên GitHub có dấu tích xanh (Active)}}{8}{figure.4}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Cấu hình Webhook gửi dữ liệu ngược từ SonarQube về lại Jenkins}}{9}{figure.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {5}Cấu hình Jenkins}{9}{section.5}\protected@file@percent }
@@ -47,104 +47,105 @@
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.3}Cấu hình Snyk Auth trên Terminal của Agent}{13}{subsubsection.5.4.3}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Xác thực tài khoản Snyk thành công trên Agent}}{13}{figure.11}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Cấu hình hiển thị Biểu đồ và Thống kê (Plugins)}{14}{subsection.5.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Tạo Multibranch Pipeline Job}{14}{subsection.5.6}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Cấu hình Branch Sources trong Multibranch Pipeline Job}}{15}{figure.12}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Cấu hình đường dẫn Jenkinsfile trong Multibranch Pipeline Job}}{16}{figure.13}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Kết quả: Jenkins tracking branches và PRs}{16}{subsection.5.7}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Danh sách các nhánh được tự động phát hiện và build}}{17}{figure.14}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Danh sách các Pull Request được tự động phát hiện và build}}{18}{figure.15}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6}Chi tiết Pipeline (Jenkinsfile)}{18}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Cấu hình chung}{18}{subsection.6.1}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {3}Cấu hình pipeline}{18}{lstlisting.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Stage 1: Checkout}{19}{subsection.6.2}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {4}Stage Checkout}{19}{lstlisting.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Stage 2: Detect Changed Modules}{20}{subsection.6.3}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {5}Stage Detect Changed Modules}{20}{lstlisting.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Stage 3: Gitleaks -- Secret Scan}{20}{subsection.6.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}Stage 4: Test (JUnit + JaCoCo)}{20}{subsection.6.5}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {6}Stage Test}{20}{lstlisting.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.6}Stage 5: Coverage Gate}{21}{subsection.6.6}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {7}Stage Coverage Gate}{21}{lstlisting.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.7}Stage 6: Build}{22}{subsection.6.7}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {8}Stage Build}{22}{lstlisting.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.8}Stage 7: SonarQube Analysis}{22}{subsection.6.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.9}Stage 8: Snyk Dependency Scan}{22}{subsection.6.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.10}Post Actions}{23}{subsection.6.10}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {9}Post-build actions}{23}{lstlisting.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}Monorepo Path Filter}{23}{section.7}\protected@file@percent }
-\newlabel{sec:monorepo}{{7}{23}{Monorepo Path Filter}{section.7}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Vấn đề}{23}{subsection.7.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Giải pháp: detect-changed-modules.sh}{23}{subsection.7.2}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {10}Logic chính của detect-changed-modules.sh}{23}{lstlisting.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Chiến lược phát hiện thay đổi}{25}{subsection.7.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Quy tắc phát hiện module thay đổi}}{25}{table.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Kết quả}{25}{subsection.7.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {8}Unit Test và Coverage Gate}{25}{section.8}\protected@file@percent }
-\newlabel{sec:unittest}{{8}{25}{Unit Test và Coverage Gate}{section.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Chiến lược Unit Test}{25}{subsection.8.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Chi tiết Test Cases}{26}{subsection.8.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.2.1}Module media (PR \#7)}{26}{subsubsection.8.2.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Unit tests cho module media}}{26}{table.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.2.2}Module tax (PR \#6)}{26}{subsubsection.8.2.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Unit tests cho module tax}}{26}{table.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Coverage Gate Script (check-coverage.sh)}{26}{subsection.8.3}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {11}check-coverage.sh - Coverage Gate}{26}{lstlisting.11}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Thiết kế Coverage Gate}{27}{subsection.8.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {9}Gitleaks -- Secret Scanning}{28}{section.9}\protected@file@percent }
-\newlabel{sec:gitleaks}{{9}{28}{Gitleaks -- Secret Scanning}{section.9}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}Vấn đề}{28}{subsection.9.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}Công cụ: Gitleaks v8.18.4}{28}{subsection.9.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.3}Cấu hình}{28}{subsection.9.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.3.1}gitleaks.toml}{28}{subsubsection.9.3.1}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {12}gitleaks.toml}{28}{lstlisting.12}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.3.2}.gitleaksignore}{29}{subsubsection.9.3.2}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {13}.gitleaksignore (trích)}{29}{lstlisting.13}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.3.3}gitleaks-baseline.json}{29}{subsubsection.9.3.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.4}Luồng quét trong Pipeline}{29}{subsection.9.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.5}Kết quả}{29}{subsection.9.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {10}SonarQube -- Code Quality Analysis}{29}{section.10}\protected@file@percent }
-\newlabel{sec:sonarqube}{{10}{29}{SonarQube -- Code Quality Analysis}{section.10}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {10.1}Giới thiệu}{29}{subsection.10.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {10.2}Cấu hình Server}{30}{subsection.10.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {10.3}Tích hợp trong Pipeline}{30}{subsection.10.3}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {14}SonarQube stage trong Jenkinsfile}{30}{lstlisting.14}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {10.4}Thiết kế}{31}{subsection.10.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {10.5}Kết quả}{31}{subsection.10.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {11}Snyk -- Dependency Vulnerability Scan}{31}{section.11}\protected@file@percent }
-\newlabel{sec:snyk}{{11}{31}{Snyk -- Dependency Vulnerability Scan}{section.11}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {11.1}Giới thiệu}{31}{subsection.11.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {11.2}Cấu hình}{31}{subsection.11.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {11.3}Tích hợp trong Pipeline}{31}{subsection.11.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {11.3.1}Snyk Test}{31}{subsubsection.11.3.1}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {15}Snyk Test command}{31}{lstlisting.15}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {11.3.2}Snyk Monitor}{32}{subsubsection.11.3.2}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {16}Snyk Monitor command}{32}{lstlisting.16}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {11.4}Xử lý lỗi}{32}{subsection.11.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {11.5}Known Issue: Exit Code -13}{32}{subsection.11.5}\protected@file@percent }
-\@writefile{lol}{\contentsline {lstlisting}{\numberline {17}Snyk error output}{32}{lstlisting.17}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {12}Kết quả thực thi Pipeline}{33}{section.12}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {12.1}Danh sách Pull Requests}{33}{subsection.12.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Danh sách Pull Requests trên GitHub}}{33}{table.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {12.2}Kết quả Pipeline cho PR \#7 (media)}{33}{subsection.12.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Kết quả pipeline PR \#7 - Module media}}{33}{table.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {12.3}Kết quả Pipeline cho PR \#6 (tax)}{33}{subsection.12.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Kết quả pipeline PR \#6 - Module tax}}{33}{table.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {12.4}Minh chứng Branch Protection hoạt động}{34}{subsection.12.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {13}Phân công công việc}{34}{section.13}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {13.1}Thành viên nhóm}{34}{subsection.13.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Thông tin thành viên nhóm}}{34}{table.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {13.2}Chi tiết phân công}{34}{subsection.13.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {13.2.1}Nguyễn Lê Thế Vinh (Leader)}{34}{subsubsection.13.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {13.2.2}Phạm Quang Vinh (Infra \& Security)}{34}{subsubsection.13.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {13.2.3}Lê Xuân Trí (Testing)}{35}{subsubsection.13.2.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {13.3}Tổng kết đóng góp}{36}{subsection.13.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Tổng kết đóng góp theo thành viên}}{36}{table.11}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {14}Kết luận}{36}{section.14}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {14.1}Tổng kết}{36}{subsection.14.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Checklist yêu cầu đồ án}}{36}{table.12}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {14.2}Điểm nổi bật}{36}{subsection.14.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {14.3}Khó khăn gặp phải}{37}{subsection.14.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {14.4}Hướng phát triển}{37}{subsection.14.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Biểu đồ Coverage Trend hiển thị thông qua JaCoCo Plugin}}{14}{figure.12}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Thống kê của SonarQube}}{14}{figure.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Tạo Multibranch Pipeline Job}{15}{subsection.5.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Cấu hình Branch Sources trong Multibranch Pipeline Job}}{16}{figure.14}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Cấu hình đường dẫn Jenkinsfile trong Multibranch Pipeline Job}}{17}{figure.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Kết quả: Jenkins tracking branches và PRs}{17}{subsection.5.7}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Danh sách các nhánh được tự động phát hiện và build}}{18}{figure.16}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Danh sách các Pull Request được tự động phát hiện và build}}{19}{figure.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Chi tiết Pipeline (Jenkinsfile)}{19}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Cấu hình chung}{19}{subsection.6.1}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {3}Cấu hình pipeline}{19}{lstlisting.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Stage 1: Checkout}{20}{subsection.6.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {4}Stage Checkout}{20}{lstlisting.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Stage 2: Detect Changed Modules}{21}{subsection.6.3}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {5}Stage Detect Changed Modules}{21}{lstlisting.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Stage 3: Gitleaks -- Secret Scan}{21}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}Stage 4: Test (JUnit + JaCoCo)}{21}{subsection.6.5}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {6}Stage Test}{21}{lstlisting.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.6}Stage 5: Coverage Gate}{22}{subsection.6.6}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {7}Stage Coverage Gate}{22}{lstlisting.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.7}Stage 6: Build}{23}{subsection.6.7}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {8}Stage Build}{23}{lstlisting.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.8}Stage 7: SonarQube Analysis}{23}{subsection.6.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.9}Stage 8: Snyk Dependency Scan}{23}{subsection.6.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.10}Post Actions}{24}{subsection.6.10}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {9}Post-build actions}{24}{lstlisting.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Monorepo Path Filter}{24}{section.7}\protected@file@percent }
+\newlabel{sec:monorepo}{{7}{24}{Monorepo Path Filter}{section.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Vấn đề}{24}{subsection.7.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Giải pháp: detect-changed-modules.sh}{24}{subsection.7.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {10}Logic chính của detect-changed-modules.sh}{24}{lstlisting.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Chiến lược phát hiện thay đổi}{26}{subsection.7.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Quy tắc phát hiện module thay đổi}}{26}{table.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Kết quả}{26}{subsection.7.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Unit Test và Coverage Gate}{26}{section.8}\protected@file@percent }
+\newlabel{sec:unittest}{{8}{26}{Unit Test và Coverage Gate}{section.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Chiến lược Unit Test}{26}{subsection.8.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Chi tiết Test Cases}{27}{subsection.8.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.2.1}Module media (PR \#7)}{27}{subsubsection.8.2.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Unit tests cho module media}}{27}{table.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {8.2.2}Module tax (PR \#6)}{27}{subsubsection.8.2.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Unit tests cho module tax}}{27}{table.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Coverage Gate Script (check-coverage.sh)}{27}{subsection.8.3}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {11}check-coverage.sh - Coverage Gate}{27}{lstlisting.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Thiết kế Coverage Gate}{28}{subsection.8.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}Gitleaks -- Secret Scanning}{29}{section.9}\protected@file@percent }
+\newlabel{sec:gitleaks}{{9}{29}{Gitleaks -- Secret Scanning}{section.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}Vấn đề}{29}{subsection.9.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}Công cụ: Gitleaks v8.18.4}{29}{subsection.9.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.3}Cấu hình}{29}{subsection.9.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.3.1}gitleaks.toml}{29}{subsubsection.9.3.1}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {12}gitleaks.toml}{29}{lstlisting.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.3.2}.gitleaksignore}{30}{subsubsection.9.3.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {13}.gitleaksignore (trích)}{30}{lstlisting.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {9.3.3}gitleaks-baseline.json}{30}{subsubsection.9.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.4}Luồng quét trong Pipeline}{30}{subsection.9.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.5}Kết quả}{30}{subsection.9.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {10}SonarQube -- Code Quality Analysis}{30}{section.10}\protected@file@percent }
+\newlabel{sec:sonarqube}{{10}{30}{SonarQube -- Code Quality Analysis}{section.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.1}Giới thiệu}{30}{subsection.10.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.2}Cấu hình Server}{31}{subsection.10.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.3}Tích hợp trong Pipeline}{31}{subsection.10.3}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {14}SonarQube Analysis \& Quality Gate}{31}{lstlisting.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.4}Thiết kế và Quality Gate}{31}{subsection.10.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.5}Kết quả}{32}{subsection.10.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {11}Snyk -- Dependency Vulnerability Scan}{32}{section.11}\protected@file@percent }
+\newlabel{sec:snyk}{{11}{32}{Snyk -- Dependency Vulnerability Scan}{section.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {11.1}Giới thiệu}{32}{subsection.11.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {11.2}Cấu hình}{32}{subsection.11.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {11.3}Tích hợp trong Pipeline}{32}{subsection.11.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {11.3.1}Snyk Test}{32}{subsubsection.11.3.1}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {15}Snyk Test command}{32}{lstlisting.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {11.3.2}Snyk Monitor}{33}{subsubsection.11.3.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {16}Snyk Monitor command}{33}{lstlisting.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {11.4}Xử lý lỗi}{33}{subsection.11.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {11.5}Khắc phục lỗi phân giải Dependency (SNYK-CLI-0000)}{33}{subsection.11.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {12}Kết quả thực thi Pipeline}{34}{section.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {12.1}Danh sách Pull Requests}{34}{subsection.12.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Danh sách Pull Requests trên GitHub}}{34}{table.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {12.2}Kết quả Pipeline cho PR \#7 (media)}{34}{subsection.12.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Kết quả pipeline PR \#7 - Module media}}{34}{table.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {12.3}Kết quả Pipeline cho PR \#6 (tax)}{34}{subsection.12.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Kết quả pipeline PR \#6 - Module tax}}{34}{table.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {12.4}Minh chứng Branch Protection hoạt động}{35}{subsection.12.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {13}Phân công công việc}{35}{section.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {13.1}Thành viên nhóm}{35}{subsection.13.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Thông tin thành viên nhóm}}{35}{table.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {13.2}Chi tiết phân công}{35}{subsection.13.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {13.2.1}Nguyễn Lê Thế Vinh (Leader)}{35}{subsubsection.13.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {13.2.2}Phạm Quang Vinh (Infra \& Security)}{35}{subsubsection.13.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {13.2.3}Lê Xuân Trí (Testing)}{36}{subsubsection.13.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {13.3}Tổng kết đóng góp}{37}{subsection.13.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Tổng kết đóng góp theo thành viên}}{37}{table.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {14}Kết luận}{37}{section.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {14.1}Tổng kết}{37}{subsection.14.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Checklist yêu cầu đồ án}}{37}{table.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {14.2}Điểm nổi bật}{37}{subsection.14.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {14.3}Khó khăn gặp phải}{38}{subsection.14.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {14.4}Hướng phát triển}{38}{subsection.14.4}\protected@file@percent }
 \bibcite{yas}{1}
 \bibcite{jenkins}{2}
 \bibcite{gitleaks}{3}
@@ -152,5 +153,5 @@
 \bibcite{snyk}{5}
 \bibcite{jacoco}{6}
 \bibcite{multibranch}{7}
-\@writefile{toc}{\contentsline {section}{Tài liệu tham khảo}{38}{section*.2}\protected@file@percent }
-\gdef \@abspage@last{40}
+\@writefile{toc}{\contentsline {section}{Tài liệu tham khảo}{39}{section*.2}\protected@file@percent }
+\gdef \@abspage@last{44}

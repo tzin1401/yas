@@ -133,9 +133,29 @@ Trong môi trường CI/CD, việc xác thực Agent bằng Token là tối ưu 
 \subsection{Cấu hình hiển thị Biểu đồ và Thống kê (Plugins)}
 Để Jenkins hiển thị được các tab báo cáo và biểu đồ từ kết quả quét, nhóm đã cấu hình các Plugin sau trên Master:
 
-\begin{itemize}[noitemsep]
+\begin{itemize}
     \item \textbf{JaCoCo Plugin}: Sau khi chạy \texttt{mvn jacoco:report}, plugin này đọc file \texttt{.exec} trong thư mục target để hiển thị biểu đồ Coverage Trend ngay tại trang chủ của Job.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    % CHỈ DẪN ẢNH: Thả ảnh 10b-jenkins-jacoco-coverage-trend.png vào thư mục img/
+    \includegraphics[width=0.9\textwidth]{img/10b-jenkins-jacoco-coverage-trend.png}
+    \caption{Biểu đồ Coverage Trend hiển thị thông qua JaCoCo Plugin}
+\end{figure}
+
+\begin{itemize}
     \item \textbf{SonarQube Scanner Plugin}: Cấu hình Webhook trỏ về \texttt{/sonarqube-webhook/} để hiển thị trạng thái Quality Gate (Passed/Failed) trực tiếp trên Pipeline.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    % CHỈ DẪN ẢNH: Thả ảnh 08b-jenkins-system-sonarqube-server.png vào thư mục img/
+    \includegraphics[width=0.9\textwidth]{img/08b-jenkins-system-sonarqube-server.png}
+    \caption{Thống kê của SonarQube}
+\end{figure}
+
+\begin{itemize}
     \item \textbf{Snyk Security Plugin}: Cho phép xem chi tiết các lỗ hổng (Vulnerabilities) theo mức độ nghiêm trọng (High, Medium, Low) ngay trong giao diện Jenkins.
 \end{itemize}
 
