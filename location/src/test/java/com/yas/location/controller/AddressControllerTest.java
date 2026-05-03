@@ -1,7 +1,10 @@
 package com.yas.location.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -10,8 +13,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.yas.commonlibrary.exception.ApiExceptionHandler;
 import com.yas.location.service.AddressService;
+import com.yas.location.viewmodel.address.AddressDetailVm;
 import com.yas.location.viewmodel.address.AddressGetVm;
 import com.yas.location.viewmodel.address.AddressPostVm;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -94,5 +99,42 @@ class AddressControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectWriter.writeValueAsString(addressPostVm)))
             .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testGetAddressById_shouldReturnOk() throws Exception {
+        AddressDetailVm detail = AddressDetailVm.builder()
+            .id(1L)
+            .city("city")
+            .contactName("n")
+            .phone("p")
+            .addressLine1("a1")
+            .addressLine2("a2")
+            .zipCode("z")
+            .districtId(1L)
+            .districtName("d")
+            .stateOrProvinceId(1L)
+            .stateOrProvinceName("s")
+            .countryId(1L)
+            .countryName("c")
+            .build();
+        when(addressService.getAddress(1L)).thenReturn(detail);
+
+        mockMvc.perform(get("/storefront/addresses/1"))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void testGetAddressList_shouldReturnOk() throws Exception {
+        when(addressService.getAddressList(anyList())).thenReturn(List.of());
+
+        mockMvc.perform(get("/storefront/addresses").param("ids", "1", "2"))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void testDeleteAddress_shouldReturnOk() throws Exception {
+        mockMvc.perform(delete("/storefront/addresses/1"))
+            .andExpect(status().isOk());
     }
 }

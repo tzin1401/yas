@@ -101,6 +101,39 @@ class CountryServiceTest {
     }
 
     @Test
+    void create_DuplicateName_ShouldThrowException() {
+        CountryPostVm postVm =
+            new CountryPostVm("x", "UN", "DupName", "USA", true, true, true, true, true);
+        when(countryRepository.existsByCode2IgnoreCase("UN")).thenReturn(false);
+        when(countryRepository.existsByNameIgnoreCase("DupName")).thenReturn(true);
+
+        assertThrows(DuplicatedException.class, () -> countryService.create(postVm));
+    }
+
+    @Test
+    void update_DuplicateName_ShouldThrow() {
+        CountryPostVm postVm =
+            new CountryPostVm("x", "TS", "TakenName", "USA", true, true, true, true, true);
+        Country existing = Country.builder().id(1L).name("old").code2("TS").build();
+        when(countryRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(countryRepository.existsByNameIgnoreCaseAndIdNot("TakenName", 1L)).thenReturn(true);
+
+        assertThrows(DuplicatedException.class, () -> countryService.update(postVm, 1L));
+    }
+
+    @Test
+    void update_DuplicateCode2_ShouldThrow() {
+        CountryPostVm postVm =
+            new CountryPostVm("x", "XX", "name", "USA", true, true, true, true, true);
+        Country existing = Country.builder().id(1L).name("name").code2("OLD").build();
+        when(countryRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(countryRepository.existsByNameIgnoreCaseAndIdNot("name", 1L)).thenReturn(false);
+        when(countryRepository.existsByCode2IgnoreCaseAndIdNot("XX", 1L)).thenReturn(true);
+
+        assertThrows(DuplicatedException.class, () -> countryService.update(postVm, 1L));
+    }
+
+    @Test
     void findById_ShouldReturnVm() {
         when(countryRepository.findById(1L)).thenReturn(Optional.of(country1));
         when(countryMapper.toCountryViewModelFromCountry(country1)).thenReturn(CountryVm.fromModel(country1));
