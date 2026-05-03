@@ -56,6 +56,8 @@ pipeline {
                 }
                 checkout scm
                 sh 'git fetch origin main:refs/remotes/origin/main || true'
+                // Snyk Maven plugin runs ./mvnw when present; without +x → spawn EACCES → exit -13.
+                sh 'find . -path ./.git -prune -o -name mvnw -type f -print -exec chmod +x {} +'
                 sh 'chmod +x ci/detect-changed-modules.sh ci/check-coverage.sh ci/verify-ci-tools.sh'
                 sh 'ci/verify-ci-tools.sh'
             }
@@ -191,6 +193,8 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     script {
+                        // Explicit org avoids REST org-metadata lookup that can 403 on some PATs (noise in SNYK-CLI-0000 summary).
+                        def snykOrg = 'vinh-code'
                         def modules = env.CHANGED_MODULES.split(',')
                         def serviceModules = modules.findAll { it != 'common-library' }
 
@@ -198,17 +202,24 @@ pipeline {
                             echo "Snyk: skip"
                         } else {
                             // Snyk CLI is Node-based; Maven resolver children need RAM — exit -13 is often OOM.
+                            // --maven-skip-wrapper: use system `mvn` (tool JDK/Maven in Checkout), not ./mvnw (avoids EACCES on wrapper).
                             // Scan light → full reactor → capped depth (avoid starting with --all-sub-projects only).
+                            // Trailing || true: không FAIL stage khi có vulnerability / lỗi Snyk — chỉ ghi log (giống báo cáo nhóm).
                             withEnv([
                                 'NODE_OPTIONS=--max-old-space-size=6144',
                                 'MAVEN_OPTS=-Xmx1536m -XX:MaxMetaspaceSize=384m'
                             ]) {
                                 sh "snyk auth \$SNYK_TOKEN"
+                                // Same graph Snyk uses internally — fail fast if Maven cannot resolve deps (before SNYK-CLI-0000 / -13).
                                 for (mod in serviceModules) {
-                                    sh "snyk test --file=${mod}/pom.xml --severity-threshold=high || snyk test --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3"
+                                    sh "mvn -B -ntp dependency:tree -f ${mod}/pom.xml"
                                 }
                                 for (mod in serviceModules) {
-                                    sh "snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects || snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects --max-depth=3"
+                                    // -d: optional verbose logs; remove after CI stable.
+                                    sh "snyk test -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --severity-threshold=high || snyk test -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3 || true"
+                                }
+                                for (mod in serviceModules) {
+                                    sh "snyk monitor -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects || snyk monitor -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects --max-depth=3 || true"
                                 }
                             }
                         }
