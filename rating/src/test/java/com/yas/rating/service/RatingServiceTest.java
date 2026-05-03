@@ -106,7 +106,7 @@ class RatingServiceTest {
         RatingPostVm postVm = RatingPostVm.builder().content("cmt").star(4).productId(1L).build();
         RatingVm result = ratingService.createRating(postVm);
         
-        assertEquals(4, result.ratingStar());
+        assertEquals(4, result.star());
     }
 
     @Test
