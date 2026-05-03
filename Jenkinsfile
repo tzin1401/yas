@@ -56,6 +56,8 @@ pipeline {
                 }
                 checkout scm
                 sh 'git fetch origin main:refs/remotes/origin/main || true'
+                // Snyk Maven plugin runs ./mvnw when present; without +x → spawn EACCES → exit -13.
+                sh 'find . -path ./.git -prune -o -name mvnw -type f -print -exec chmod +x {} +'
                 sh 'chmod +x ci/detect-changed-modules.sh ci/check-coverage.sh ci/verify-ci-tools.sh'
                 sh 'ci/verify-ci-tools.sh'
             }
