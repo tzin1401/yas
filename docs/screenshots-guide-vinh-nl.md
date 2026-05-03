@@ -57,11 +57,15 @@ Chi tiết kỹ thuật: `docs/bao-cao/CI-PIPELINE-NOI-DUNG-BAO-CAO.md`.
 - Một ảnh (nếu có): **Recent Deliveries** — một delivery **thành công** (✓, HTTP 200).
 - **Tên file:** `03-github-webhook-list.png`, `04-github-webhook-delivery-ok.png`
 
-### 1.4 GitHub Token kết nối với Jenkins (Mới bổ sung cho task A3)
+### 1.4 Kết nối Jenkins với GitHub (Chi tiết cho task A3)
 
-- **Settings (của tài khoản cá nhân)** → **Developer Settings** → **Personal Access Tokens** (hoặc GitHub Apps nếu nhóm dùng App).
-- Chụp danh sách thấy có token được tạo riêng cho Jenkins (không để lộ nội dung token). Đây là minh chứng cho việc lấy token cấp quyền cho Jenkins quét repo.
-- **Tên file:** `04b-github-developer-token.png`
+Quá trình kết nối (A3) đòi hỏi phải chứng minh được luồng xác thực từ GitHub về Jenkins, do đó bạn cần chụp 3 ảnh sau:
+
+- **Ảnh 1 (Tạo Token trên GitHub):** Vào **Settings (cá nhân)** → **Developer Settings** → **Personal Access Tokens** (hoặc GitHub Apps). Chụp màn hình danh sách token hiển thị rõ token cấp cho Jenkins (che mã bí mật đi).
+- **Ảnh 2 (Lưu Credentials trên Jenkins):** Vào **Manage Jenkins** → **Credentials** → **System** → **Global credentials**. Chụp màn hình hiển thị danh sách có chứa ID của GitHub Token (ví dụ: `github-token` hoặc tên nhóm đặt) thuộc loại *Secret text* hoặc *Username with password*.
+- **Ảnh 3 (Cấu hình GitHub Server trên Jenkins):** Vào **Manage Jenkins** → **System** → cuộn xuống phần **GitHub**. Chụp màn hình cấu hình *GitHub Servers* hiển thị dòng **Credentials** đã chọn đúng token ở bước 2 và có dòng chữ `Credentials verified` (nếu có bấm test connection).
+
+- **Tên file:** `04b-github-pat.png`, `04c-jenkins-github-credentials.png`, `04d-jenkins-github-server-config.png`
 
 ---
 
