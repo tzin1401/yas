@@ -204,11 +204,16 @@ pipeline {
                                 'MAVEN_OPTS=-Xmx1536m -XX:MaxMetaspaceSize=384m'
                             ]) {
                                 sh "snyk auth \$SNYK_TOKEN"
+                                // Same graph Snyk uses internally — fail fast if Maven cannot resolve deps (before SNYK-CLI-0000 / -13).
                                 for (mod in serviceModules) {
-                                    sh "snyk test --file=${mod}/pom.xml --severity-threshold=high || snyk test --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3"
+                                    sh "mvn -B -ntp dependency:tree -f ${mod}/pom.xml"
                                 }
                                 for (mod in serviceModules) {
-                                    sh "snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects || snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects --max-depth=3"
+                                    // -d: debug logs for STDERR/STDOUT when child process dies with exit -13 (see Snyk docs).
+                                    sh "snyk test -d --file=${mod}/pom.xml --severity-threshold=high || snyk test -d --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test -d --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3"
+                                }
+                                for (mod in serviceModules) {
+                                    sh "snyk monitor -d --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor -d --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects || snyk monitor -d --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects --max-depth=3"
                                 }
                             }
                         }
