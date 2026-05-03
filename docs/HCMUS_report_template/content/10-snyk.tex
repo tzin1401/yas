@@ -39,12 +39,15 @@ Pipeline được thiết kế với cơ chế \textbf{retry} và \textbf{gracef
     \item Nếu vẫn fail → ghi warning, pipeline \textbf{tiếp tục} (không block)
 \end{enumerate}
 
-\subsection{Khắc phục lỗi phân giải Dependency (SNYK-CLI-0000)}
-Trong quá trình triển khai, nhóm từng gặp lỗi Snyk crash với mã \texttt{exit code: -13} (SNYK-CLI-0000) khi chạy trên môi trường Jenkins. 
+\subsection{Known Issue: Exit Code -13}
+Hiện tại Snyk CLI gặp lỗi \texttt{exit code: -13} trên Jenkins server:
+\begin{lstlisting}[caption={Snyk error output}]
+ERROR  Unspecified Error (SNYK-CLI-0000)
+Child process failed with exit code: -13.
+\end{lstlisting}
 
-\textbf{Nguyên nhân}: Snyk nội bộ sử dụng \texttt{mvn dependency:tree} để phân tích. Với kiến trúc Monorepo, việc quét một module con (ví dụ \texttt{order}) bằng cờ \texttt{-f order/pom.xml} sẽ khiến Maven không tìm thấy file POM cha (\texttt{yas} parent) để nội suy biến \texttt{\$\{revision\}}, dẫn đến việc tiến trình cấp dưới của Snyk bị lỗi và trả về mã -13.
-
-\textbf{Cách giải quyết}: Nhóm đã cấu hình lại Pipeline để chạy lệnh \texttt{mvn dependency:tree -pl \$\{module\} -am} trước bước chạy Snyk. Lệnh này giúp Maven tải và cache sẵn toàn bộ dependency tree của module và POM cha vào local repository. Nhờ vậy, bước quét Snyk sau đó diễn ra hoàn toàn trơn tru và không còn lỗi.
+\textbf{Nguyên nhân}: Process bị kill do thiếu RAM trên EC2 instance hoặc Snyk CLI version cũ.\\
+\textbf{Ảnh hưởng}: Pipeline vẫn pass nhờ cơ chế retry + graceful degradation.\\
+\textbf{Hướng fix}: Nâng cấp RAM EC2 hoặc update Snyk CLI lên phiên bản mới nhất.
 
 % [Ảnh: Console output Snyk scanning]
-% [Ảnh: Giao diện Snyk Web Dashboard]

@@ -130,32 +130,32 @@ Trong môi trường CI/CD, việc xác thực Agent bằng Token là tối ưu 
     \caption{Xác thực tài khoản Snyk thành công trên Agent}
 \end{figure}
 
-\subsection{Cấu hình hiển thị Biểu đồ và Thống kê (Plugins)}
-Để Jenkins hiển thị được các tab báo cáo và biểu đồ từ kết quả quét, nhóm đã cấu hình các Plugin sau trên Master:
+\subsection{Cấu hình hiển thị Báo cáo}
+Để Jenkins hiển thị được các kết quả sau khi build, nhóm đã cấu hình:
 
-\begin{itemize}
-    \item \textbf{JaCoCo Plugin}: Sau khi chạy \texttt{mvn jacoco:report}, plugin này đọc file \texttt{.exec} trong thư mục target để hiển thị biểu đồ Coverage Trend ngay tại trang chủ của Job.
+\begin{itemize}[noitemsep]
+    \item \textbf{JUnit Plugin}: Đọc các file \texttt{TEST-*.xml} trong thư mục \texttt{target/surefire-reports/} để hiển thị biểu đồ Test Result Trend trực tiếp trên giao diện Jenkins.
+    \item \textbf{Archive Artifacts}: Lưu trữ file báo cáo Coverage \texttt{jacoco.xml} sau khi chạy xong để người dùng có thể tải về trực tiếp từ giao diện build của Jenkins.
+    \item \textbf{JaCoCo Plugin}: Plugin đọc file \texttt{.exec} trong thư mục target để hiển thị biểu đồ Coverage Trend ngay tại trang chủ của Job.
 \end{itemize}
 
 \begin{figure}[H]
     \centering
-    % CHỈ DẪN ẢNH: Thả ảnh 10b-jenkins-jacoco-coverage-trend.png vào thư mục img/
     \includegraphics[width=0.9\textwidth]{img/10b-jenkins-jacoco-coverage-trend.png}
     \caption{Biểu đồ Coverage Trend hiển thị thông qua JaCoCo Plugin}
 \end{figure}
 
-\begin{itemize}
-    \item \textbf{SonarQube Scanner Plugin}: Cấu hình Webhook trỏ về \texttt{/sonarqube-webhook/} để hiển thị trạng thái Quality Gate (Passed/Failed) trực tiếp trên Pipeline.
+\begin{itemize}[noitemsep]
+    \item \textbf{SonarQube Scanner Plugin}: Cấu hình Webhook trỏ về \texttt{/sonarqube-webhook/} để kết nối với SonarQube.
 \end{itemize}
 
 \begin{figure}[H]
     \centering
-    % CHỈ DẪN ẢNH: Thả ảnh 08b-jenkins-system-sonarqube-server.png vào thư mục img/
     \includegraphics[width=0.9\textwidth]{img/08b-jenkins-system-sonarqube-server.png}
     \caption{Thống kê của SonarQube}
 \end{figure}
 
-\begin{itemize}
+\begin{itemize}[noitemsep]
     \item \textbf{Snyk Security Plugin}: Cho phép xem chi tiết các lỗ hổng (Vulnerabilities) theo mức độ nghiêm trọng (High, Medium, Low) ngay trong giao diện Jenkins.
 \end{itemize}
 

@@ -72,17 +72,19 @@ Quét toàn bộ source code tìm secrets/API keys bị rò rỉ. Chi tiết ở
 \begin{lstlisting}[language=java, caption={Stage Test}]
 stage('Test') {
     steps {
-        // ... mvn test jacoco:report ...
+        script {
+            def modules = env.CHANGED_MODULES.split(',')
+            for (module in modules) {
+                sh "mvn -B -ntp -pl ${module} -am test jacoco:report -DskipITs"
+            }
+        }
     }
     post {
         always {
             junit allowEmptyResults: true,
                   testResults: '**/target/surefire-reports/*.xml'
-            recordCoverage(
-                tools: [[parser: 'JACOCO', pattern: '**/target/site/jacoco/jacoco.xml']],
-                id: 'jacoco', name: 'JaCoCo Coverage',
-                sourceDirectories: [ [path: 'location/src/main/java'], /* ... */ ]
-            )
+            archiveArtifacts allowEmptyArchive: true,
+                             artifacts: '**/target/site/jacoco/jacoco.xml'
         }
     }
 }
@@ -93,7 +95,8 @@ Stage này:
     \item Chỉ chạy test cho \textbf{modules thay đổi} (\texttt{-pl \$\{module\}})
     \item Tự động build dependencies (\texttt{-am}: also make)
     \item Skip Integration Tests (\texttt{-DskipITs})
-    \item Tích hợp plugin \textbf{recordCoverage} cho phép vẽ biểu đồ Coverage và xem chi tiết từng dòng code đỏ/xanh trực tiếp trên giao diện Jenkins.
+    \item Sinh JaCoCo coverage report (\texttt{jacoco:report})
+    \item Upload test results (JUnit XML) và coverage report (JaCoCo XML) lên Jenkins
 \end{itemize}
 
 \subsection{Stage 5: Coverage Gate}
