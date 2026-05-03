@@ -228,7 +228,4 @@ public class ProductCdcConsumerIT extends CdcConsumerIT<ProductMsgKey, ProductCd
             List.of("Bluetooth 5.0", "10-hour battery life")
         );
     }
-
-}}
-
 }
