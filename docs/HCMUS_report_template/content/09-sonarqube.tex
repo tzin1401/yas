@@ -13,40 +13,37 @@ Nhóm sử dụng SonarQube \textbf{self-hosted} trên cùng AWS EC2 instance v�
     \item \textbf{Project Key}: \texttt{nashtech-garage\_yas-yas-parent} (auto-detected từ pom.xml)
 \end{itemize}
 
+% [Ảnh: Screenshot cấu hình Jenkins System - SonarQube servers]
+% [Ảnh: Screenshot cấu hình Webhook trên SonarQube]
 % [Ảnh: SonarQube Dashboard - Overview]
 
 \subsection{Tích hợp trong Pipeline}
-\begin{lstlisting}[language=java, caption={SonarQube stage trong Jenkinsfile}]
+\begin{lstlisting}[language=java, caption={SonarQube Analysis \& Quality Gate}]
 stage('SonarQube - Analysis') {
     steps {
-        withCredentials([string(
-            credentialsId: 'sonarqube-token', 
-            variable: 'SONAR_TOKEN')]) {
-            script {
-                def modules = env.CHANGED_MODULES.split(',')
-                def serviceModules = modules.findAll { 
-                    it != 'common-library' 
-                }
-                def plArg = serviceModules.join(',')
-                sh """
-                    mvn sonar:sonar \
-                      -pl ${plArg} -am \
-                      -Dsonar.host.url=${SONAR_HOST_URL} \
-                      -Dsonar.token=${SONAR_TOKEN} \
-                      -Dsonar.coverage.jacoco.xmlReportPaths=\
-                        target/site/jacoco/jacoco.xml
-                """
+        withSonarQubeEnv('sonar-server') {
+            withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                sh "mvn sonar:sonar -pl ${plArg} -am -Dsonar.host.url=..."
+            }
+        }
+    }
+}
+stage('SonarQube - Quality Gate') {
+    steps {
+        withSonarQubeEnv('sonar-server') {
+            timeout(time: 15, unit: 'MINUTES') {
+                waitForQualityGate abortPipeline: false
             }
         }
     }
 }
 \end{lstlisting}
 
-\subsection{Thiết kế}
+\subsection{Thiết kế và Quality Gate}
 \begin{itemize}[noitemsep]
     \item Chỉ phân tích \textbf{service modules} thay đổi (exclude common-library)
-    \item Sử dụng JaCoCo report cho coverage metrics trên SonarQube
-    \item Token được inject qua \texttt{withCredentials}, không hardcode trong code
+    \item Sử dụng \texttt{withSonarQubeEnv} để Jenkins tự động nhận biết cấu hình server.
+    \item Stage \textbf{Quality Gate} sử dụng lệnh \texttt{waitForQualityGate} để treo Pipeline cho đến khi SonarQube phân tích xong và gửi webhook kết quả về lại Jenkins.
 \end{itemize}
 
 \subsection{Kết quả}
