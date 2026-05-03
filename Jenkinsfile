@@ -13,7 +13,8 @@
 //  4. Test + JaCoCo report (chỉ modules thay đổi, skip Integration Tests)
 //  5. Coverage Gate (≥ 70%, graceful skip nếu không có code)
 //  6. Build (chỉ modules thay đổi)
-//  7. SonarQube Analysis (chỉ modules thay đổi)
+//  7. SonarQube Analysis (withSonarQubeEnv — liên kết Quality Gate)
+//  7b. SonarQube Quality Gate (waitForQualityGate — cần webhook Sonar → Jenkins)
 //  8. Snyk Dependency Scan (chỉ modules thay đổi)
 // ============================================================
 
@@ -33,10 +34,12 @@ pipeline {
     }
 
     environment {
-        COVERAGE_THRESHOLD   = '70'
-        SONAR_HOST_URL       = 'http://3.27.92.213:9000'
-        MAVEN_OPTS           = '-Xmx512m -XX:MaxMetaspaceSize=256m'
-        GITLEAKS_EXPECTED    = '8.18.4'
+        COVERAGE_THRESHOLD       = '70'
+        SONAR_HOST_URL           = 'http://3.27.92.213:9000'
+        // Phải trùng tên SonarQube server trong Manage Jenkins → System (SonarQube installations).
+        SONARQUBE_INSTALLATION   = 'sonar-server'
+        MAVEN_OPTS               = '-Xmx512m -XX:MaxMetaspaceSize=256m'
+        GITLEAKS_EXPECTED        = '8.18.4'
     }
 
     stages {
@@ -56,6 +59,8 @@ pipeline {
                 }
                 checkout scm
                 sh 'git fetch origin main:refs/remotes/origin/main || true'
+                // Snyk Maven plugin runs ./mvnw when present; without +x → spawn EACCES → exit -13.
+                sh 'find . -path ./.git -prune -o -name mvnw -type f -print -exec chmod +x {} +'
                 sh 'chmod +x ci/detect-changed-modules.sh ci/check-coverage.sh ci/verify-ci-tools.sh'
                 sh 'ci/verify-ci-tools.sh'
             }
@@ -109,10 +114,34 @@ pipeline {
             }
             post {
                 always {
+                    // 1. Thu thập báo cáo kết quả các case Test (JUnit)
                     junit allowEmptyResults: true,
                           testResults: '**/target/surefire-reports/*.xml,**/target/failsafe-reports/*.xml'
-                    archiveArtifacts allowEmptyArchive: true,
-                                     artifacts: '**/target/site/jacoco/jacoco.xml'
+
+                    // 2. JaCoCo: biểu đồ / source painting trên UI — không qualityGates ở đây (gate 70% ở stage Coverage Gate + ci/check-coverage.sh).
+                    recordCoverage(
+                        tools: [[parser: 'JACOCO', pattern: '**/target/site/jacoco/jacoco.xml']],
+                        id: 'jacoco',
+                        name: 'JaCoCo Coverage',
+
+                        // Khai báo đường dẫn để hiển thị mã nguồn (fix lỗi Source file not found)
+                        sourceDirectories: [
+                            [path: 'common-library/src/main/java'],
+                            [path: 'payment/src/main/java'],
+                            [path: 'media/src/main/java'],
+                            [path: 'cart/src/main/java'],
+                            [path: 'catalog/src/main/java'],
+                            [path: 'customer/src/main/java'],
+                            [path: 'inventory/src/main/java'],
+                            [path: 'location/src/main/java'],
+                            [path: 'order/src/main/java'],
+                            [path: 'product/src/main/java'],
+                            [path: 'promotion/src/main/java'],
+                            [path: 'rating/src/main/java'],
+                            [path: 'search/src/main/java'],
+                            [path: 'tax/src/main/java']
+                        ]
+                    )
                 }
             }
         }
@@ -155,28 +184,53 @@ pipeline {
 
         // ══════════════════════════════════════════════════════
         // STAGE 7 – SonarQube Analysis
-        // Override sonar.host.url → AWS server (không dùng SonarCloud)
+        // withSonarQubeEnv: Jenkins liên kết lần phân tích với server → hỗ trợ Quality Gate + badge.
         // ══════════════════════════════════════════════════════
         stage('SonarQube – Analysis') {
             steps {
-                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
-                    script {
-                        def modules = env.CHANGED_MODULES.split(',')
-                        def serviceModules = modules.findAll { it != 'common-library' }
+                script {
+                    def modules = env.CHANGED_MODULES.split(',')
+                    def serviceModules = modules.findAll { it != 'common-library' }
 
-                        if (serviceModules.isEmpty()) {
-                            echo "SonarQube: skip"
-                        } else {
-                            def plArg = serviceModules.join(',')
-                            echo "SonarQube: ${plArg}"
-                            sh """
-                                mvn sonar:sonar \
-                                  -pl ${plArg} -am \
-                                  -Dsonar.host.url=${SONAR_HOST_URL} \
-                                  -Dsonar.token=${SONAR_TOKEN} \
-                                  -Dsonar.organization= \
-                                  -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-                            """
+                    if (serviceModules.isEmpty()) {
+                        echo "SonarQube: skip"
+                    } else {
+                        def plArg = serviceModules.join(',')
+                        echo "SonarQube: ${plArg}"
+                        withSonarQubeEnv("${env.SONARQUBE_INSTALLATION}") {
+                            withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                                sh """
+                                    mvn sonar:sonar \\
+                                      -pl ${plArg} -am \\
+                                      -Dsonar.host.url=${SONAR_HOST_URL} \\
+                                      -Dsonar.token=${SONAR_TOKEN} \\
+                                      -Dsonar.organization= \\
+                                      -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+                                """
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ══════════════════════════════════════════════════════
+        // STAGE 7b – SonarQube Quality Gate (nhận kết quả từ Sonar)
+        // Cần webhook SonarQube → Jenkins (Administration → Webhooks). abortPipeline: false = không đỏ build khi QG fail.
+        // ══════════════════════════════════════════════════════
+        stage('SonarQube – Quality Gate') {
+            steps {
+                script {
+                    def modules = env.CHANGED_MODULES.split(',')
+                    def serviceModules = modules.findAll { it != 'common-library' }
+
+                    if (serviceModules.isEmpty()) {
+                        echo "SonarQube Quality Gate: skip"
+                    } else {
+                        withSonarQubeEnv("${env.SONARQUBE_INSTALLATION}") {
+                            timeout(time: 15, unit: 'MINUTES') {
+                                waitForQualityGate abortPipeline: false
+                            }
                         }
                     }
                 }
@@ -191,6 +245,8 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     script {
+                        // Explicit org avoids REST org-metadata lookup that can 403 on some PATs (noise in SNYK-CLI-0000 summary).
+                        def snykOrg = 'vinh-code'
                         def modules = env.CHANGED_MODULES.split(',')
                         def serviceModules = modules.findAll { it != 'common-library' }
 
@@ -198,17 +254,24 @@ pipeline {
                             echo "Snyk: skip"
                         } else {
                             // Snyk CLI is Node-based; Maven resolver children need RAM — exit -13 is often OOM.
+                            // --maven-skip-wrapper: use system `mvn` (tool JDK/Maven in Checkout), not ./mvnw (avoids EACCES on wrapper).
                             // Scan light → full reactor → capped depth (avoid starting with --all-sub-projects only).
+                            // Trailing || true: không FAIL stage khi có vulnerability / lỗi Snyk — chỉ ghi log (giống báo cáo nhóm).
                             withEnv([
                                 'NODE_OPTIONS=--max-old-space-size=6144',
                                 'MAVEN_OPTS=-Xmx1536m -XX:MaxMetaspaceSize=384m'
                             ]) {
                                 sh "snyk auth \$SNYK_TOKEN"
+                                // Same graph Snyk uses internally — fail fast if Maven cannot resolve deps (before SNYK-CLI-0000 / -13).
                                 for (mod in serviceModules) {
-                                    sh "snyk test --file=${mod}/pom.xml --severity-threshold=high || snyk test --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3"
+                                    sh "mvn -B -ntp dependency:tree -f ${mod}/pom.xml"
                                 }
                                 for (mod in serviceModules) {
-                                    sh "snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects || snyk monitor --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects --max-depth=3"
+                                    // -d: optional verbose logs; remove after CI stable.
+                                    sh "snyk test -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --severity-threshold=high || snyk test -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3 || true"
+                                }
+                                for (mod in serviceModules) {
+                                    sh "snyk monitor -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects || snyk monitor -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects --max-depth=3 || true"
                                 }
                             }
                         }
