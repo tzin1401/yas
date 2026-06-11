@@ -29,3 +29,10 @@ hs_err_pid*
 .settings*
 .vscode
 *.iml
+
+# Local agent workflow artifacts
+AGENTS.md
+.agents/
+.codex/
+ci/setup-local-agent-tools.sh
+.specify/extensions/agent-context/
