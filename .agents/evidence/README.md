@@ -1,0 +1,23 @@
+# Evidence Checklist
+
+- [ ] `tailscale status`
+- [ ] `kubectl get nodes -o wide`
+- [ ] `kubectl get pods -A`
+- [ ] `kubectl get storageclass,pvc -A`
+- [ ] Jenkins `yas-ci-multibranch` successful run
+- [ ] Docker Hub commit SHA image tag
+- [ ] Docker Hub `main/latest` image tags
+- [ ] Docker Hub `vX.Y.Z` release tag
+- [ ] ArgoCD `yas-dev` Synced/Healthy
+- [ ] ArgoCD `yas-staging` Synced/Healthy
+- [ ] ArgoCD `yas-developer` Synced/Healthy
+- [ ] `developer_build` log showing branch-to-commit resolution
+- [ ] `teardown_developer` log showing GitOps prune
+- [ ] `rollback_environment` log showing revert
+- [ ] App URL reachable via hosts file and NodePort
+- [ ] Istio pod READY `2/2`
+- [ ] mTLS check output
+- [ ] AuthorizationPolicy allow/deny curl logs
+- [ ] Retry curl logs
+- [ ] Kiali topology screenshot
+- [ ] Production reality check section in report
