@@ -16,16 +16,23 @@ Do not commit any credential material, kubeconfig content, Google Cloud service 
 
 - Trigger: PR, branch push, Git tag.
 - Keeps Lab 1 gates.
-- Builds/pushes Docker Hub images for changed deployable services.
+- Validates `services.yaml` before CD work.
+- Builds/pushes Docker Hub images for changed deployable services after Gitleaks, tests, coverage, build, SonarQube, and Snyk complete.
+- Reads deployable services from `services.yaml`; `common-library` changes rebuild all deployable service images because it is a shared Maven dependency.
 - Tags:
   - feature branch: commit SHA
   - `main`: commit SHA, `main`, `latest`
   - `vX.Y.Z`: commit SHA, `vX.Y.Z`
+- GitOps updates:
+  - `main` updates `deploy/gitops/overlays/dev` to the `main` image tag.
+  - `vX.Y.Z` updates `deploy/gitops/overlays/staging` to the immutable release tag.
+  - staging rejects non-`vX.Y.Z`, `main`, and `latest` tags.
+- Jenkins does not run `kubectl set image` or direct `kubectl apply` for `dev`, `staging`, or `developer`.
 
 ### `developer_build`
 
 - Manual parameters:
-  - branch per service, default `main`
+  - branch per service, default `main` in the full job configuration
   - `TARGET_ENV=developer`
   - optional `SERVICE_SCOPE`
 - Resolves each branch to commit SHA.
@@ -35,6 +42,14 @@ Do not commit any credential material, kubeconfig content, Google Cloud service 
 - Syncs ArgoCD app `yas-developer`.
 - Outputs app URL using the GCP VM external IP and the selected ingress mode, for example `http://yas.developer.local:30080`.
 
+Current Jenkinsfile fallback:
+
+- Set `CD_ACTION=developer_build_stub`.
+- Set `IMAGE_TAG=<already-built-tag>`, default `main`.
+- Set `SERVICE_SCOPE=cart,product` or leave empty for all deployable catalog services.
+- The stub validates catalog service names, updates `deploy/gitops/overlays/developer`, commits GitOps desired state, and lets ArgoCD own sync.
+- It intentionally does not mutate Kubernetes directly. Branch-to-commit resolution remains part of the full per-service branch matrix job.
+
 ### `teardown_developer`
 
 - Manual parameters:
@@ -43,12 +58,14 @@ Do not commit any credential material, kubeconfig content, Google Cloud service 
 - Disables or removes developer overlay through GitOps.
 - Lets ArgoCD prune resources.
 - Does not directly delete resources from ArgoCD-managed namespace.
+- Current Jenkinsfile fallback (`CD_ACTION=teardown_developer`) is a documented no-mutation guard stage until the GitOps overlay owner completes the removable developer state.
 
 ### `deploy_dev`
 
 - Triggered after `main` passes CI.
 - Updates `deploy/gitops/overlays/dev`.
 - Syncs `yas-dev`.
+- Can be run manually with `CD_ACTION=deploy_dev` and optional `SERVICE_SCOPE`.
 
 ### `release_staging`
 
@@ -57,6 +74,7 @@ Do not commit any credential material, kubeconfig content, Google Cloud service 
 - Updates `deploy/gitops/overlays/staging`.
 - Syncs `yas-staging`.
 - Must not deploy `latest`.
+- Can be run manually with `CD_ACTION=release_staging`; the Jenkinsfile fails before GitOps changes unless `RELEASE_TAG` matches `vX.Y.Z`.
 
 ### `rollback_environment`
 
@@ -64,6 +82,7 @@ Do not commit any credential material, kubeconfig content, Google Cloud service 
   - `TARGET_ENV=dev|staging`
   - `ROLLBACK_TAG` or `GITOPS_COMMIT`
 - Reverts overlay and syncs ArgoCD.
+- Current Jenkinsfile support writes `ROLLBACK_TAG` through the same catalog-driven GitOps image update path. Commit-based revert remains a documented operator procedure until the full job is split out.
 
 ### `cluster_smoke_check`
 

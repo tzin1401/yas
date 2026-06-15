@@ -16,7 +16,9 @@ dependencies:
     - kafka
     - zookeeper
     - elasticsearch
+    - pgvector
     - yas-configuration
+    - backend-services
 services:
   - name: cart
     path: cart

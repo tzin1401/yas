@@ -47,6 +47,19 @@ Minimum firewall intent:
 
 Install host and cluster tooling on the VM:
 
+Before running cluster, GitOps, or mesh commands, verify the operator shell has the expected CLIs:
+
+```bash
+yq --version
+helm version --short
+kustomize version
+kubectl version --client
+argocd version --client
+istioctl version --remote=false
+```
+
+Gate: do not continue until all commands return a version. Install missing tools first, then capture the command output as evidence.
+
 ```bash
 sudo apt-get update
 sudo apt-get install -y ca-certificates curl gnupg lsb-release apt-transport-https git yq
@@ -119,6 +132,53 @@ kubectl get storageclass
 
 Local-path storage is lab-only. It is tied to this VM and does not provide managed replication or cross-node migration.
 
+## GitOps Readiness
+
+ArgoCD owns the `dev`, `staging`, and `developer` namespaces. Do not run `kubectl set image` or direct `kubectl apply` against workloads in those namespaces. Jenkins updates GitOps files, and ArgoCD reconciles the cluster.
+
+Verify desired state before syncing:
+
+```bash
+yq '.services[] | select(.deploy == true) | .name' services.yaml
+kustomize build --enable-helm --load-restrictor=LoadRestrictionsNone deploy/gitops/overlays/dev >/tmp/yas-dev-render.yaml
+kustomize build --enable-helm --load-restrictor=LoadRestrictionsNone deploy/gitops/overlays/staging >/tmp/yas-staging-render.yaml
+kustomize build --enable-helm --load-restrictor=LoadRestrictionsNone deploy/gitops/overlays/developer >/tmp/yas-developer-render.yaml
+kubectl create namespace dev --dry-run=client -o yaml
+kubectl create namespace staging --dry-run=client -o yaml
+kubectl create namespace developer --dry-run=client -o yaml
+```
+
+Verify ArgoCD applications after Jenkins commits desired state:
+
+```bash
+argocd app list
+argocd app get yas-dev
+argocd app get yas-staging
+argocd app get yas-developer
+argocd app wait yas-dev --health --sync --timeout 600
+argocd app wait yas-staging --health --sync --timeout 600
+argocd app wait yas-developer --health --sync --timeout 600
+kubectl get pods,svc,ingress -n dev
+kubectl get pods,svc,ingress -n staging
+kubectl get pods,svc,ingress -n developer
+```
+
+Gate: every required ArgoCD app must be `Synced` and `Healthy` before recording application URL evidence.
+
+## Staging Immutability
+
+Staging must use immutable release tags such as `vX.Y.Z`. It must not deploy `latest`, `main`, or branch names.
+
+Before promoting staging, verify the GitOps diff and rendered manifests:
+
+```bash
+git diff -- deploy/gitops/overlays/staging
+kustomize build --enable-helm --load-restrictor=LoadRestrictionsNone deploy/gitops/overlays/staging | yq '.. | select(type == "!!map" and has("image")) | .image' -
+kustomize build --enable-helm --load-restrictor=LoadRestrictionsNone deploy/gitops/overlays/staging | yq '.. | select(type == "!!map" and has("image") and (.image | test(":(latest|main)$"))) | .image' -
+```
+
+Gate: the first render command must show only Docker Hub images in the form `docker.io/$DOCKERHUB_USERNAME/yas-<service>:vX.Y.Z`; the mutable-tag check must produce no output.
+
 ## Ingress And Platform Controllers
 
 Install Nginx Ingress with stable NodePorts:
@@ -169,9 +229,17 @@ Capture:
 - GCP VM machine type, memory, disk, and OS version.
 - GCP firewall rules or screenshots proving admin access is restricted.
 - SSH tunnel command or screenshot for admin UI access.
+- Tool version gate output for `yq`, `helm`, `kustomize`, `kubectl`, `argocd`, and `istioctl`
 - `kubectl get nodes -o wide`
 - `kubectl describe node yas-gcp-single-node`
 - `kubectl get pods -A`
 - `kubectl get storageclass,pvc -A`
 - ArgoCD apps `Synced/Healthy`
+- GitOps render output for changed overlays
+- Staging immutable image tag evidence
 - App URL through hosts file/Host header and NodePort.
+
+## Production Reality Notes
+
+- NodePort, hosts file routing, local-path storage, demo credentials, and Jenkins Docker access are lab conveniences only.
+- Production should use DNS and TLS, least-privilege RBAC, external or sealed secrets, isolated image builders, managed storage or CSI-backed storage, and auditable GitOps promotion controls.
