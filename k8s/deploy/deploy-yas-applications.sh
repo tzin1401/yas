@@ -5,8 +5,13 @@ set -x
 helm repo add stakater https://stakater.github.io/stakater-charts
 helm repo update
 
-read -rd '' DOMAIN \
-< <(yq -r '.domain' ./cluster-config.yaml)
+CONFIG_FILE="${YAS_CLUSTER_CONFIG:-./cluster-config.yaml}"
+if [[ ! -f "$CONFIG_FILE" ]]; then
+  echo "Missing config file: $CONFIG_FILE" >&2
+  exit 1
+fi
+
+DOMAIN="$(yq -r '.domain' "$CONFIG_FILE")"
 
 helm dependency build ../charts/backoffice-bff
 helm upgrade --install backoffice-bff ../charts/backoffice-bff \

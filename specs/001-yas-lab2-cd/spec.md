@@ -2,13 +2,13 @@
 
 ## Objective
 
-Build the Lab 2 CD layer for the existing `tzin1401/yas` fork. The platform must preserve Lab 1 CI gates, build Docker Hub images for changed services, and deploy YAS to Kubernetes through GitOps-managed `dev`, `staging`, and `developer` environments.
+Build the Lab 2 CD layer for the existing `tzin1401/yas` fork. The platform must preserve Lab 1 CI gates, build Docker Hub images for changed services, and deploy YAS to Kubernetes through GitOps-managed `dev`, `staging`, and `developer` environments. The current runtime target is a single Google Cloud Compute Engine VM with 32 GB RAM running `kubeadm` single-node Kubernetes.
 
 ## Users
 
 - Developer: pushes branches and manually deploys a preview environment through `developer_build`.
 - Release owner: tags `vX.Y.Z` and deploys staging.
-- Operator: validates cluster, ArgoCD, rollback, teardown, and service mesh evidence.
+- Operator: validates the GCP VM, Kubernetes, ArgoCD, rollback, teardown, and service mesh evidence.
 
 ## Functional Requirements
 
@@ -24,25 +24,30 @@ Build the Lab 2 CD layer for the existing `tzin1401/yas` fork. The platform must
 - FR-010: `teardown_developer` must remove developer resources through GitOps/ArgoCD prune.
 - FR-011: GitOps/docs/spec/agent-only commits must skip full Maven/image pipeline.
 - FR-012: Service mesh evidence must show mTLS, authorization allow/deny, retry, and Kiali topology.
+- FR-013: The cluster runbook must provision a GCP VM based `kubeadm` single-node cluster without Tailscale.
+- FR-014: Admin interfaces must be accessed through SSH tunnels or firewall allowlisting, not broad public exposure.
 
 ## Non-Functional Requirements
 
 - NFR-001: No real secrets are committed.
 - NFR-002: Staging never deploys `latest`.
 - NFR-003: Base GitOps manifests must not hardcode environment namespaces.
-- NFR-004: NodePort, NFS, Tailscale, and demo credentials must be documented as lab-only.
+- NFR-004: NodePort, hosts-file DNS, local-path storage, and demo credentials must be documented as lab-only.
+- NFR-005: The plan must not rely on Tailscale.
 
 ## Success Criteria
 
 - Jenkins CI still passes for a changed service.
 - Docker Hub contains commit SHA, `main/latest`, and `vX.Y.Z` image tags.
+- The GCP VM shows one Ready Kubernetes node with 32 GB-class capacity.
 - ArgoCD apps for `dev`, `staging`, and `developer` are `Synced/Healthy`.
 - `developer_build` deploys one branch-specific service with dependencies ready.
 - Teardown and rollback produce auditable Jenkins and ArgoCD logs.
+- App URLs are reachable through the VM external IP plus hosts file or Host header.
 - Mesh demo has curl and Kiali evidence.
 
 ## Boundaries
 
-- Always: follow `AGENTS.md`, use `services.yaml`, render manifests before GitOps commits.
-- Ask first: changing Java/Spring version decision, removing CI gates, adding real external services.
-- Never: commit secrets, deploy direct into ArgoCD-managed namespaces, use GHCR upstream images for final CD.
+- Always: follow `AGENTS.md`, use `services.yaml`, render manifests before GitOps commits, restrict admin access, and keep secrets out of Git.
+- Ask first: changing Java/Spring version decision, removing CI gates, adding real external services, exposing admin UIs publicly, or replacing kubeadm with another Kubernetes distribution.
+- Never: commit secrets, deploy direct into ArgoCD-managed namespaces, use GHCR upstream images for final CD, or reintroduce Tailscale as the Lab 2 network path.

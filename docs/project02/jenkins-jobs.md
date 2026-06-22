@@ -8,6 +8,8 @@
 - `kubeconfig-readonly`: secret file for read-only cluster smoke checks.
 - Existing Lab 1 credentials: `sonarqube-token`, `snyk-token`.
 
+Do not commit any credential material, kubeconfig content, Google Cloud service account key, or SSH private key.
+
 ## Jobs
 
 ### `yas-ci-multibranch`
@@ -31,7 +33,7 @@
 - Updates `deploy/gitops/overlays/developer`.
 - Commits to `lab2/cd-platform`.
 - Syncs ArgoCD app `yas-developer`.
-- Outputs URL through NodePort.
+- Outputs app URL using the GCP VM external IP and the selected ingress mode, for example `http://yas.developer.local:30080`.
 
 ### `teardown_developer`
 
@@ -65,13 +67,14 @@
 
 ### `cluster_smoke_check`
 
-- Manual read-only job.
+- Manual read-only job against the GCP VM cluster.
 - Runs:
   - `kubectl get nodes`
   - `kubectl get pods -A`
   - `kubectl get ingress,svc -A`
+  - `kubectl get storageclass,pvc -A`
   - `argocd app list`
-  - curl health/frontend URL
+  - curl health/frontend URL through `GCP_VM_EXTERNAL_IP` and expected Host header
 
 ## Skip-CI Rule
 

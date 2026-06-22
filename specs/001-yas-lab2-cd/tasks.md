@@ -6,6 +6,7 @@
 - [x] Create `AGENTS.md` hard rules.
 - [x] Create `docs/project02/project-version.md`.
 - [x] Initialize Spec Kit and create SDD artifact placeholders.
+- [x] Update SDD and agent context for GCP VM single-node Kubernetes.
 
 ## Phase 2 - Service Catalog
 
@@ -27,15 +28,19 @@
 - [ ] Add `developer_build` job implementation.
 - [ ] Add `teardown_developer`, `deploy_dev`, `release_staging`, `rollback_environment`, and `cluster_smoke_check`.
 
-## Phase 5 - Cluster And Mesh Evidence
+## Phase 5 - GCP Cluster And Mesh Evidence
 
-- [ ] Execute kubeadm/Tailscale cluster runbook on real machines.
-- [ ] Install NFS provisioner, ingress, ArgoCD, Istio, and Kiali.
+- [ ] Provision one 32 GB Google Cloud VM and reserve or record its external IP.
+- [ ] Configure GCP firewall: app/demo ports as needed; admin UI ports restricted to SSH tunnel or admin IP allowlist.
+- [ ] Execute kubeadm single-node cluster runbook on the VM.
+- [ ] Remove the control-plane taint so workloads can schedule on the single node.
+- [ ] Install local-path storage, ingress, ArgoCD, Istio, and Kiali.
 - [ ] Capture required evidence logs/screenshots.
 
 ## Checkpoint
 
 - [ ] No committed real secrets.
+- [ ] No active Tailscale dependency remains in Lab 2 runbooks/specs.
 - [ ] Docs/GitOps-only commits skip full Maven/image pipeline.
 - [ ] ArgoCD apps sync from `lab2/cd-platform`.
 - [ ] Developer deployment includes platform dependencies.

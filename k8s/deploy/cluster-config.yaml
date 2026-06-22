@@ -1,8 +1,11 @@
-domain: yas.local.com
+# Lab-safe template values. For real deployments, copy this file to
+# cluster-config.local.yaml, replace every REPLACE_ME value there, and run
+# scripts with YAS_CLUSTER_CONFIG=cluster-config.local.yaml.
+domain: yas.local
 postgresql:
   replicas: 1
   username: yasadminuser
-  password: admin
+  password: REPLACE_ME_POSTGRES_PASSWORD
 kafka:
   replicas: 1
 zookeeper:
@@ -10,15 +13,15 @@ zookeeper:
 elasticsearch:
   replicas: 1
   username: yas
-  password: LarUmB3A49NTg9YmgW4=
+  password: REPLACE_ME_ELASTICSEARCH_PASSWORD
 keycloak:
   bootstrapAdmin:
     username: admin
-    password: admin
-  backofficeRedirectUrl: http://backoffice.yas.local.com
-  storefrontRedirectUrl: http://storefront.yas.local.com
+    password: REPLACE_ME_KEYCLOAK_BOOTSTRAP_PASSWORD
+  backofficeRedirectUrl: http://backoffice.yas.local
+  storefrontRedirectUrl: http://storefront.yas.local
 grafana:
   username: admin
-  password: admin
+  password: REPLACE_ME_GRAFANA_PASSWORD
 redis:
-  password: redis
+  password: REPLACE_ME_REDIS_PASSWORD

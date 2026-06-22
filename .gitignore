@@ -36,3 +36,16 @@ AGENTS.md
 .codex/
 ci/setup-local-agent-tools.sh
 .specify/extensions/agent-context/
+
+# Local secrets and cluster access
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+.kube/
+kubeconfig*
+admin.conf
+cluster-config.local.yaml
+k8s/deploy/cluster-config.local.yaml
