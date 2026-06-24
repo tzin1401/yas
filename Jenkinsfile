@@ -431,58 +431,66 @@ pipeline {
                 expression { env.CHANGED_MODULES != '__skip_full_ci__' }
             }
             steps {
-                sshagent(credentials: ["${env.GITOPS_CREDENTIALS_ID}"]) {
-                    sh '''#!/usr/bin/env bash
-                        set -euo pipefail
+                script {
+                    if (fileExists('.ci-deployable-services') && readFile('.ci-deployable-services').trim()) {
+                        withCredentials([
+                            sshUserPrivateKey(
+                                credentialsId: "${env.GITOPS_CREDENTIALS_ID}",
+                                keyFileVariable: 'GITOPS_SSH_KEY'
+                            )
+                        ]) {
+                            sh '''#!/usr/bin/env bash
+                                set -euo pipefail
 
-                        if [ ! -s .ci-deployable-services ]; then
-                            echo "No deployable service images were pushed; skipping GitOps update."
-                            exit 0
-                        fi
+                                commit_tag="$(cat .ci-image-tag)"
+                                target_env=""
+                                image_tag=""
 
-                        commit_tag="$(cat .ci-image-tag)"
-                        target_env=""
-                        image_tag=""
+                                if [ -n "${TAG_NAME:-}" ] && echo "${TAG_NAME}" | grep -Eq '^v[0-9]+\\.[0-9]+\\.[0-9]+([-.][0-9A-Za-z.-]+)?$'; then
+                                    target_env="staging"
+                                    image_tag="${TAG_NAME}"
+                                elif [ "${BRANCH_NAME:-}" = "main" ]; then
+                                    target_env="dev"
+                                    image_tag="main"
+                                elif [ "${DEPLOY_TO_DEVELOPER:-false}" = "true" ]; then
+                                    target_env="developer"
+                                    image_tag="${commit_tag}"
+                                else
+                                    echo "Feature branch image pushed, but DEPLOY_TO_DEVELOPER=false; skipping GitOps update."
+                                    exit 0
+                                fi
 
-                        if [ -n "${TAG_NAME:-}" ] && echo "${TAG_NAME}" | grep -Eq '^v[0-9]+\\.[0-9]+\\.[0-9]+([-.][0-9A-Za-z.-]+)?$'; then
-                            target_env="staging"
-                            image_tag="${TAG_NAME}"
-                        elif [ "${BRANCH_NAME:-}" = "main" ]; then
-                            target_env="dev"
-                            image_tag="main"
-                        elif [ "${DEPLOY_TO_DEVELOPER:-false}" = "true" ]; then
-                            target_env="developer"
-                            image_tag="${commit_tag}"
-                        else
-                            echo "Feature branch image pushed, but DEPLOY_TO_DEVELOPER=false; skipping GitOps update."
-                            exit 0
-                        fi
+                                export GIT_SSH_COMMAND="ssh -i ${GITOPS_SSH_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
 
-                        rm -rf yas-cd-work
-                        git clone "$GITOPS_REPO" yas-cd-work
-                        cd yas-cd-work
-                        git checkout "$GITOPS_BRANCH"
+                                rm -rf yas-cd-work
+                                git clone "$GITOPS_REPO" yas-cd-work
+                                cd yas-cd-work
+                                git checkout "$GITOPS_BRANCH"
 
-                        cp ../services.yaml services.yaml
+                                cp ../services.yaml services.yaml
 
-                        while IFS= read -r service_name; do
-                            [ -n "$service_name" ] || continue
-                            scripts/update-image-tag.sh "$target_env" "$service_name" "$image_tag"
-                        done < ../.ci-deployable-services
+                                while IFS= read -r service_name; do
+                                    [ -n "$service_name" ] || continue
+                                    scripts/update-image-tag.sh "$target_env" "$service_name" "$image_tag"
+                                done < ../.ci-deployable-services
 
-                        git status --short
-                        if git diff --quiet; then
-                            echo "GitOps desired state already matches ${target_env}/${image_tag}."
-                            exit 0
-                        fi
+                                git status --short
+                                if git diff --quiet; then
+                                    echo "GitOps desired state already matches ${target_env}/${image_tag}."
+                                    exit 0
+                                fi
 
-                        git config user.name "jenkins-cd"
-                        git config user.email "jenkins-cd@local"
-                        git add services.yaml overlays
-                        git commit -m "cd(lab2): update ${target_env} image tags [skip ci]"
-                        git pull --rebase origin "$GITOPS_BRANCH"
-                        git push origin "$GITOPS_BRANCH"
-                    '''
+                                git config user.name "jenkins-cd"
+                                git config user.email "jenkins-cd@local"
+                                git add services.yaml overlays
+                                git commit -m "cd(lab2): update ${target_env} image tags [skip ci]"
+                                git pull --rebase origin "$GITOPS_BRANCH"
+                                git push origin "$GITOPS_BRANCH"
+                            '''
+                        }
+                    } else {
+                        echo 'No deployable service images were pushed; skipping GitOps update.'
+                    }
                 }
             }
         }
