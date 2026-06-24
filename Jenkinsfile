@@ -337,64 +337,87 @@ pipeline {
                 expression { env.CHANGED_MODULES != '__skip_full_ci__' }
             }
             steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: "${env.DOCKERHUB_CREDENTIALS_ID}",
-                        usernameVariable: 'DOCKERHUB_USERNAME',
-                        passwordVariable: 'DOCKERHUB_TOKEN'
-                    )
-                ]) {
-                    sh '''#!/usr/bin/env bash
-                        set -euo pipefail
+                sh '''#!/usr/bin/env bash
+                    set -euo pipefail
 
-                        command -v docker >/dev/null 2>&1
-                        command -v yq >/dev/null 2>&1
+                    command -v yq >/dev/null 2>&1
 
-                        commit_tag="$(git rev-parse --short=12 HEAD)"
-                        printf '%s' "$commit_tag" > .ci-image-tag
-                        : > .ci-deployable-services
+                    commit_tag="$(git rev-parse --short=12 HEAD)"
+                    printf '%s' "$commit_tag" > .ci-image-tag
+                    : > .ci-deployable-services
 
-                        echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+                    IFS=',' read -r -a modules <<< "${CHANGED_MODULES}"
+                    for module in "${modules[@]}"; do
+                        [ "$module" = "common-library" ] && continue
+                        [ "$module" = "delivery" ] && continue
 
-                        IFS=',' read -r -a modules <<< "${CHANGED_MODULES}"
-                        for module in "${modules[@]}"; do
-                            [ "$module" = "common-library" ] && continue
-                            [ "$module" = "delivery" ] && continue
+                        service_name="$(MODULE="$module" yq -r '.services[] | select(.name == env(MODULE) or .path == env(MODULE)) | .name' services.yaml | head -n 1)"
+                        [ -n "$service_name" ] && [ "$service_name" != "null" ] || continue
 
-                            service_name="$(MODULE="$module" yq -r '.services[] | select(.name == env(MODULE) or .path == env(MODULE)) | .name' services.yaml | head -n 1)"
-                            [ -n "$service_name" ] && [ "$service_name" != "null" ] || continue
+                        deploy_enabled="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .deploy' services.yaml)"
+                        [ "$deploy_enabled" = "true" ] || continue
 
-                            deploy_enabled="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .deploy' services.yaml)"
-                            [ "$deploy_enabled" = "true" ] || continue
+                        dockerfile="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .dockerfile' services.yaml)"
+                        service_path="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .path' services.yaml)"
+                        image_name="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .imageName' services.yaml)"
+                        [ -n "$dockerfile" ] && [ "$dockerfile" != "null" ] || continue
+                        [ -n "$service_path" ] && [ "$service_path" != "null" ] || continue
+                        [ -n "$image_name" ] && [ "$image_name" != "null" ] || continue
 
-                            dockerfile="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .dockerfile' services.yaml)"
-                            service_path="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .path' services.yaml)"
-                            image_name="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .imageName' services.yaml)"
-                            image_ref="docker.io/${DOCKERHUB_USERNAME}/${image_name}"
+                        echo "$service_name" >> .ci-deployable-services
+                    done
 
-                            echo "Building ${service_name}: ${image_ref}:${commit_tag}"
-                            docker build -f "$dockerfile" -t "${image_ref}:${commit_tag}" "$service_path"
-                            docker push "${image_ref}:${commit_tag}"
+                    if [ ! -s .ci-deployable-services ]; then
+                        echo "No deployable service image was selected for CHANGED_MODULES=${CHANGED_MODULES}."
+                    fi
+                '''
+                script {
+                    if (fileExists('.ci-deployable-services') && readFile('.ci-deployable-services').trim()) {
+                        withCredentials([
+                            usernamePassword(
+                                credentialsId: "${env.DOCKERHUB_CREDENTIALS_ID}",
+                                usernameVariable: 'DOCKERHUB_USERNAME',
+                                passwordVariable: 'DOCKERHUB_TOKEN'
+                            )
+                        ]) {
+                            sh '''#!/usr/bin/env bash
+                                set -euo pipefail
 
-                            if [ "${BRANCH_NAME:-}" = "main" ]; then
-                                docker tag "${image_ref}:${commit_tag}" "${image_ref}:main"
-                                docker tag "${image_ref}:${commit_tag}" "${image_ref}:latest"
-                                docker push "${image_ref}:main"
-                                docker push "${image_ref}:latest"
-                            fi
+                                command -v docker >/dev/null 2>&1
+                                command -v yq >/dev/null 2>&1
 
-                            if [ -n "${TAG_NAME:-}" ] && echo "${TAG_NAME}" | grep -Eq '^v[0-9]+\\.[0-9]+\\.[0-9]+([-.][0-9A-Za-z.-]+)?$'; then
-                                docker tag "${image_ref}:${commit_tag}" "${image_ref}:${TAG_NAME}"
-                                docker push "${image_ref}:${TAG_NAME}"
-                            fi
+                                commit_tag="$(cat .ci-image-tag)"
+                                echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
-                            echo "$service_name" >> .ci-deployable-services
-                        done
+                                while IFS= read -r service_name; do
+                                    [ -n "$service_name" ] || continue
 
-                        if [ ! -s .ci-deployable-services ]; then
-                            echo "No deployable service image was built for CHANGED_MODULES=${CHANGED_MODULES}."
-                        fi
-                    '''
+                                    dockerfile="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .dockerfile' services.yaml)"
+                                    service_path="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .path' services.yaml)"
+                                    image_name="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .imageName' services.yaml)"
+                                    image_ref="docker.io/${DOCKERHUB_USERNAME}/${image_name}"
+
+                                    echo "Building ${service_name}: ${image_ref}:${commit_tag}"
+                                    docker build -f "$dockerfile" -t "${image_ref}:${commit_tag}" "$service_path"
+                                    docker push "${image_ref}:${commit_tag}"
+
+                                    if [ "${BRANCH_NAME:-}" = "main" ]; then
+                                        docker tag "${image_ref}:${commit_tag}" "${image_ref}:main"
+                                        docker tag "${image_ref}:${commit_tag}" "${image_ref}:latest"
+                                        docker push "${image_ref}:main"
+                                        docker push "${image_ref}:latest"
+                                    fi
+
+                                    if [ -n "${TAG_NAME:-}" ] && echo "${TAG_NAME}" | grep -Eq '^v[0-9]+\\.[0-9]+\\.[0-9]+([-.][0-9A-Za-z.-]+)?$'; then
+                                        docker tag "${image_ref}:${commit_tag}" "${image_ref}:${TAG_NAME}"
+                                        docker push "${image_ref}:${TAG_NAME}"
+                                    fi
+                                done < .ci-deployable-services
+                            '''
+                        }
+                    } else {
+                        echo 'Skipping Docker Hub credentials because no deployable service image was selected.'
+                    }
                 }
             }
         }
