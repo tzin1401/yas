@@ -3,7 +3,8 @@
 ## Credentials
 
 - `dockerhub-creds`: username/password, where password is a Docker Hub access token.
-- `github-gitops-ssh`: SSH private key for pushing GitOps commits to `tzin1401/yas`.
+- `github-gitops-ssh`: SSH private key or deploy key for pushing GitOps commits to
+  `git@github.com:emanhthangngot/yas-cd.git`.
 - `argocd-token`: secret text for `argocd app sync/get`.
 - `kubeconfig-readonly`: secret file for read-only cluster smoke checks.
 - Existing Lab 1 credentials: `sonarqube-token`, `snyk-token`.
@@ -15,12 +16,18 @@ Do not commit any credential material, kubeconfig content, Google Cloud service 
 ### `yas-ci-multibranch`
 
 - Trigger: PR, branch push, Git tag.
-- Keeps Lab 1 gates.
+- Runs on Jenkins node label `gcp-build-agent`.
+- Keeps Lab 1 gates: changed-module detection, Gitleaks, tests, JaCoCo coverage gate,
+  Maven build, SonarQube, and Snyk.
 - Builds/pushes Docker Hub images for changed deployable services.
 - Tags:
   - feature branch: commit SHA
   - `main`: commit SHA, `main`, `latest`
   - `vX.Y.Z`: commit SHA, `vX.Y.Z`
+- Clones `git@github.com:emanhthangngot/yas-cd.git`.
+- Updates the target overlay with `scripts/update-image-tag.sh`.
+- Runs `scripts/validate-gitops.sh` before pushing.
+- Pushes GitOps changes to `yas-cd/main`; it never mutates ArgoCD-managed namespaces directly.
 
 ### `developer_build`
 
@@ -30,8 +37,8 @@ Do not commit any credential material, kubeconfig content, Google Cloud service 
   - optional `SERVICE_SCOPE`
 - Resolves each branch to commit SHA.
 - Builds/pushes missing image tags.
-- Updates `deploy/gitops/overlays/developer`.
-- Commits to `lab2/cd-platform`.
+- Updates `overlays/developer` in `emanhthangngot/yas-cd`.
+- Commits to `yas-cd/main`.
 - Syncs ArgoCD app `yas-developer`.
 - Outputs app URL using the GCP VM external IP and the selected ingress mode, for example `http://yas.developer.local:30080`.
 
@@ -47,14 +54,14 @@ Do not commit any credential material, kubeconfig content, Google Cloud service 
 ### `deploy_dev`
 
 - Triggered after `main` passes CI.
-- Updates `deploy/gitops/overlays/dev`.
+- Updates `overlays/dev` in `emanhthangngot/yas-cd`.
 - Syncs `yas-dev`.
 
 ### `release_staging`
 
 - Trigger: Git tag `vX.Y.Z`.
 - Manual fallback parameter: `RELEASE_TAG=vX.Y.Z`.
-- Updates `deploy/gitops/overlays/staging`.
+- Updates `overlays/staging` in `emanhthangngot/yas-cd`.
 - Syncs `yas-staging`.
 - Must not deploy `latest`.
 
@@ -78,4 +85,6 @@ Do not commit any credential material, kubeconfig content, Google Cloud service 
 
 ## Skip-CI Rule
 
-If only `deploy/gitops/**`, `docs/**`, `.agents/**`, or `.specify/**` changed, skip full Maven/image work and run lightweight validation only.
+GitOps changes live in `emanhthangngot/yas-cd`, so they should not trigger full Maven/image CI
+in this app repo. If only `docs/**`, `.agents/**`, or `.specify/**` changed in this repo, skip
+full Maven/image work and run lightweight validation only.

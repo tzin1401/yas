@@ -1,7 +1,7 @@
 // ============================================================
 //  YAS Monorepo – Jenkins CI Pipeline (Merged)
 //  Controller (AWS): orchestration + UI + logs.
-//  Agents (máy nhóm): build/test/scan — label: yas-build-worker
+//  Agent (GCP VM): build/test/scan/CD — label: gcp-build-agent
 //  SonarQube: http://3.27.92.213:9000
 //  JDK/Maven tools: JDK-25, Maven (Global Tool Configuration)
 // ============================================================
@@ -20,7 +20,7 @@
 
 pipeline {
     agent {
-        label 'yas-build-worker'
+        label 'gcp-build-agent'
     }
 
     // JDK/Maven: resolve once via tool step (avoids repeating "Tool Installation" every stage).
@@ -33,6 +33,14 @@ pipeline {
         disableConcurrentBuilds()
     }
 
+    parameters {
+        booleanParam(
+            name: 'DEPLOY_TO_DEVELOPER',
+            defaultValue: false,
+            description: 'For feature branches, update the developer GitOps overlay after image push.'
+        )
+    }
+
     environment {
         COVERAGE_THRESHOLD       = '70'
         SONAR_HOST_URL           = 'http://3.27.92.213:9000'
@@ -40,6 +48,10 @@ pipeline {
         SONARQUBE_INSTALLATION   = 'sonar-server'
         MAVEN_OPTS               = '-Xmx512m -XX:MaxMetaspaceSize=256m'
         GITLEAKS_EXPECTED        = '8.18.4'
+        DOCKERHUB_CREDENTIALS_ID = 'dockerhub-creds'
+        GITOPS_REPO              = 'git@github.com:emanhthangngot/yas-cd.git'
+        GITOPS_BRANCH            = 'main'
+        GITOPS_CREDENTIALS_ID    = 'github-gitops-ssh'
     }
 
     stages {
@@ -312,6 +324,142 @@ pipeline {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // ══════════════════════════════════════════════════════
+        // STAGE 9 – Docker Hub image build/push
+        // Lab 2 CD: build deployable services listed in services.yaml and publish Docker Hub tags.
+        // ══════════════════════════════════════════════════════
+        stage('Docker Hub – Build & Push Images') {
+            when {
+                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+            }
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: "${env.DOCKERHUB_CREDENTIALS_ID}",
+                        usernameVariable: 'DOCKERHUB_USERNAME',
+                        passwordVariable: 'DOCKERHUB_TOKEN'
+                    )
+                ]) {
+                    sh '''#!/usr/bin/env bash
+                        set -euo pipefail
+
+                        command -v docker >/dev/null 2>&1
+                        command -v yq >/dev/null 2>&1
+
+                        commit_tag="$(git rev-parse --short=12 HEAD)"
+                        printf '%s' "$commit_tag" > .ci-image-tag
+                        : > .ci-deployable-services
+
+                        echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
+                        IFS=',' read -r -a modules <<< "${CHANGED_MODULES}"
+                        for module in "${modules[@]}"; do
+                            [ "$module" = "common-library" ] && continue
+                            [ "$module" = "delivery" ] && continue
+
+                            service_name="$(MODULE="$module" yq -r '.services[] | select(.name == env(MODULE) or .path == env(MODULE)) | .name' services.yaml | head -n 1)"
+                            [ -n "$service_name" ] && [ "$service_name" != "null" ] || continue
+
+                            deploy_enabled="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .deploy' services.yaml)"
+                            [ "$deploy_enabled" = "true" ] || continue
+
+                            dockerfile="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .dockerfile' services.yaml)"
+                            service_path="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .path' services.yaml)"
+                            image_name="$(SERVICE="$service_name" yq -r '.services[] | select(.name == env(SERVICE)) | .imageName' services.yaml)"
+                            image_ref="docker.io/${DOCKERHUB_USERNAME}/${image_name}"
+
+                            echo "Building ${service_name}: ${image_ref}:${commit_tag}"
+                            docker build -f "$dockerfile" -t "${image_ref}:${commit_tag}" "$service_path"
+                            docker push "${image_ref}:${commit_tag}"
+
+                            if [ "${BRANCH_NAME:-}" = "main" ]; then
+                                docker tag "${image_ref}:${commit_tag}" "${image_ref}:main"
+                                docker tag "${image_ref}:${commit_tag}" "${image_ref}:latest"
+                                docker push "${image_ref}:main"
+                                docker push "${image_ref}:latest"
+                            fi
+
+                            if [ -n "${TAG_NAME:-}" ] && echo "${TAG_NAME}" | grep -Eq '^v[0-9]+\\.[0-9]+\\.[0-9]+([-.][0-9A-Za-z.-]+)?$'; then
+                                docker tag "${image_ref}:${commit_tag}" "${image_ref}:${TAG_NAME}"
+                                docker push "${image_ref}:${TAG_NAME}"
+                            fi
+
+                            echo "$service_name" >> .ci-deployable-services
+                        done
+
+                        if [ ! -s .ci-deployable-services ]; then
+                            echo "No deployable service image was built for CHANGED_MODULES=${CHANGED_MODULES}."
+                        fi
+                    '''
+                }
+            }
+        }
+
+        // ══════════════════════════════════════════════════════
+        // STAGE 10 – GitOps overlay update
+        // Jenkins updates yas-cd only; ArgoCD owns cluster sync.
+        // ══════════════════════════════════════════════════════
+        stage('GitOps – Update CD Repo') {
+            when {
+                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+            }
+            steps {
+                sshagent(credentials: ["${env.GITOPS_CREDENTIALS_ID}"]) {
+                    sh '''#!/usr/bin/env bash
+                        set -euo pipefail
+
+                        if [ ! -s .ci-deployable-services ]; then
+                            echo "No deployable service images were pushed; skipping GitOps update."
+                            exit 0
+                        fi
+
+                        commit_tag="$(cat .ci-image-tag)"
+                        target_env=""
+                        image_tag=""
+
+                        if [ -n "${TAG_NAME:-}" ] && echo "${TAG_NAME}" | grep -Eq '^v[0-9]+\\.[0-9]+\\.[0-9]+([-.][0-9A-Za-z.-]+)?$'; then
+                            target_env="staging"
+                            image_tag="${TAG_NAME}"
+                        elif [ "${BRANCH_NAME:-}" = "main" ]; then
+                            target_env="dev"
+                            image_tag="main"
+                        elif [ "${DEPLOY_TO_DEVELOPER:-false}" = "true" ]; then
+                            target_env="developer"
+                            image_tag="${commit_tag}"
+                        else
+                            echo "Feature branch image pushed, but DEPLOY_TO_DEVELOPER=false; skipping GitOps update."
+                            exit 0
+                        fi
+
+                        rm -rf yas-cd-work
+                        git clone "$GITOPS_REPO" yas-cd-work
+                        cd yas-cd-work
+                        git checkout "$GITOPS_BRANCH"
+
+                        cp ../services.yaml services.yaml
+
+                        while IFS= read -r service_name; do
+                            [ -n "$service_name" ] || continue
+                            scripts/update-image-tag.sh "$target_env" "$service_name" "$image_tag"
+                        done < ../.ci-deployable-services
+
+                        git status --short
+                        if git diff --quiet; then
+                            echo "GitOps desired state already matches ${target_env}/${image_tag}."
+                            exit 0
+                        fi
+
+                        git config user.name "jenkins-cd"
+                        git config user.email "jenkins-cd@local"
+                        git add services.yaml overlays
+                        git commit -m "cd(lab2): update ${target_env} image tags [skip ci]"
+                        git pull --rebase origin "$GITOPS_BRANCH"
+                        git push origin "$GITOPS_BRANCH"
+                    '''
                 }
             }
         }
