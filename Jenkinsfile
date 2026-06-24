@@ -106,7 +106,7 @@ pipeline {
                 sh '''
                     set -euo pipefail
                     echo "Docs/GitOps/spec-only change detected; skipping full Maven CI."
-                    find deploy/gitops docs .agents .specify -type f \\( -name '*.yaml' -o -name '*.yml' -o -name '*.md' \\) -print >/tmp/lab2-non-code-files.txt
+                    find deploy/gitops docs specs .agents .specify -type f \\( -name '*.yaml' -o -name '*.yml' -o -name '*.md' \\) -print >/tmp/lab2-non-code-files.txt
                     test -s /tmp/lab2-non-code-files.txt
                 '''
             }

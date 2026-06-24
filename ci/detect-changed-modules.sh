@@ -51,7 +51,7 @@ changed_files="$(git diff --name-only "${base_ref}"...HEAD || true)"
 # Lab 2 CD: GitOps/docs/spec/agent-only commits should not trigger full Maven
 # test/build/image work. Jenkins will run lightweight validation only.
 if [[ -n "${changed_files}" ]] \
-  && ! grep -Ev '^(deploy/gitops/|docs/|\.agents/|\.specify/)' <<< "${changed_files}" | grep -q .; then
+  && ! grep -Ev '^(deploy/gitops/|docs/|specs/|\.agents/|\.specify/)' <<< "${changed_files}" | grep -q .; then
   printf '%s\n' "__skip_full_ci__"
   exit 0
 fi
