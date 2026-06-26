@@ -1,10 +1,16 @@
 package com.yas.search.config;
 
+import static com.yas.search.kafka.config.consumer.ProductCdcKafkaListenerConfig.PRODUCT_CDC_LISTENER_CONTAINER_FACTORY;
+
 import dasniko.testcontainers.keycloak.KeycloakContainer;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.annotation.Bean;
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -35,6 +41,20 @@ public class SearchIntegrationTestConfiguration {
                 kafkaContainer::getBootstrapServers);
             registry.add("spring.kafka.consumer.auto-offset-reset",
                 () -> "earliest");
+        };
+    }
+
+    @Bean
+    public static BeanPostProcessor productCdcListenerAckModePostProcessor() {
+        return new BeanPostProcessor() {
+            @Override
+            public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+                if (PRODUCT_CDC_LISTENER_CONTAINER_FACTORY.equals(beanName)
+                    && bean instanceof ConcurrentKafkaListenerContainerFactory<?, ?> factory) {
+                    factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL);
+                }
+                return bean;
+            }
         };
     }
 
