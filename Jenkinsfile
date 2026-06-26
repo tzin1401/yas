@@ -337,8 +337,9 @@ pipeline {
                 expression { env.CHANGED_MODULES != '__skip_full_ci__' }
             }
             steps {
-                sh '''#!/usr/bin/env bash
+                sh '''bash <<'BASH'
                     set -euo pipefail
+                    echo "Selecting deployable Docker services for CHANGED_MODULES=${CHANGED_MODULES}"
 
                     service_field() {
                         local selector="$1"
@@ -395,7 +396,11 @@ pipeline {
 
                     if [ ! -s .ci-deployable-services ]; then
                         echo "No deployable service image was selected for CHANGED_MODULES=${CHANGED_MODULES}."
+                    else
+                        echo "Deployable services:"
+                        cat .ci-deployable-services
                     fi
+BASH
                 '''
                 script {
                     if (fileExists('.ci-deployable-services') && readFile('.ci-deployable-services').trim()) {
@@ -406,7 +411,7 @@ pipeline {
                                 passwordVariable: 'DOCKERHUB_TOKEN'
                             )
                         ]) {
-                            sh '''#!/usr/bin/env bash
+                            sh '''bash <<'BASH'
                                 set -euo pipefail
 
                                 command -v docker >/dev/null 2>&1
@@ -469,6 +474,7 @@ pipeline {
                                         docker push "${image_ref}:${TAG_NAME}"
                                     fi
                                 done < .ci-deployable-services
+BASH
                             '''
                         }
                     } else {
