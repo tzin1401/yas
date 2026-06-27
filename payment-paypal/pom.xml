@@ -86,6 +86,13 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>repackage</id>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>repackage-exec</id>
                         <goals>
                             <goal>repackage</goal>
                         </goals>
