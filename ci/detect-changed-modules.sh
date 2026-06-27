@@ -63,9 +63,9 @@ if [[ -n "${changed_files}" ]] \
   exit 0
 fi
 
-# If shared build or root files change, rebuild all modules.
+# If shared build, root files, or the service catalog change, rebuild all modules.
 if [[ -z "${changed_files}" ]] \
-  || grep -Eq '^(pom\.xml|\.github/|checkstyle/|common-library/|docker/|k8s/|scripts/)' <<< "${changed_files}"; then
+  || grep -Eq '^(pom\.xml|services\.yaml|\.github/|checkstyle/|common-library/|docker/|k8s/|scripts/)' <<< "${changed_files}"; then
   printf '%s\n' "${modules[@]}" | paste -sd ','
   exit 0
 fi
@@ -81,5 +81,70 @@ if [[ ${#selected_modules[@]} -eq 0 ]]; then
   # Non-module change (e.g. docs): keep CI green but cheap by running one core module.
   selected_modules=("common-library")
 fi
+
+is_selected() {
+  local candidate="$1"
+  local selected
+  for selected in "${selected_modules[@]}"; do
+    [[ "${selected}" == "${candidate}" ]] && return 0
+  done
+  return 1
+}
+
+module_exists() {
+  local candidate="$1"
+  local module
+  for module in "${modules[@]}"; do
+    [[ "${module}" == "${candidate}" ]] && return 0
+  done
+  return 1
+}
+
+service_dependencies="$(
+  awk '
+    function emit() {
+      if (name != "") {
+        gsub(/[[:space:]]/, "", deps)
+        print name ":" deps
+      }
+    }
+    function reset() {
+      name = ""
+      deps = ""
+    }
+    $1 == "-" && $2 == "name:" {
+      emit()
+      reset()
+      name = $3
+      next
+    }
+    $1 == "dependencies:" {
+      deps = $0
+      sub(/^.*\[/, "", deps)
+      sub(/\].*$/, "", deps)
+      next
+    }
+    END { emit() }
+  ' services.yaml
+)"
+
+added=1
+while [[ ${added} -eq 1 ]]; do
+  added=0
+  while IFS=: read -r service deps; do
+    [[ -n "${service}" ]] || continue
+    module_exists "${service}" || continue
+    is_selected "${service}" && continue
+
+    IFS=',' read -r -a dep_list <<< "${deps}"
+    for dependency in "${dep_list[@]}"; do
+      if is_selected "${dependency}"; then
+        selected_modules+=("${service}")
+        added=1
+        break
+      fi
+    done
+  done <<< "${service_dependencies}"
+done
 
 printf '%s\n' "${selected_modules[@]}" | paste -sd ','
