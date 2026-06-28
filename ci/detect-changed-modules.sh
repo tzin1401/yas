@@ -56,9 +56,15 @@ if [[ -n "${changed_files}" ]] \
   exit 0
 fi
 
-# Only Jenkinsfile and/or ci/* changed → CI-only; avoid rebuilding every module (Coverage Gate on all services).
+# Pipeline changes affect build/push/GitOps behavior, so validate the full path.
+if grep -Eq '^Jenkinsfile$' <<< "${changed_files}"; then
+  printf '%s\n' "${modules[@]}" | paste -sd ','
+  exit 0
+fi
+
+# Only ci/* changed → CI-only; avoid rebuilding every module (Coverage Gate on all services).
 if [[ -n "${changed_files}" ]] \
-  && ! grep -Ev '^(Jenkinsfile|ci/)' <<< "${changed_files}" | grep -q .; then
+  && ! grep -Ev '^ci/' <<< "${changed_files}" | grep -q .; then
   printf '%s\n' "common-library" | paste -sd ','
   exit 0
 fi
