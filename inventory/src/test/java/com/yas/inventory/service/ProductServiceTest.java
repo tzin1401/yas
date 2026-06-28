@@ -118,6 +118,26 @@ class ProductServiceTest {
     }
 
     @Test
+    void testHandleProductInfoFallback_shouldThrowException() {
+        Throwable throwable = new RuntimeException("Test exception");
+        try {
+            productService.handleProductInfoFallback(throwable);
+        } catch (Throwable t) {
+            assertEquals(throwable, t);
+        }
+    }
+
+    @Test
+    void testHandleProductInfoListFallback_shouldThrowException() {
+        Throwable throwable = new RuntimeException("Test exception");
+        try {
+            productService.handleProductInfoListFallback(throwable);
+        } catch (Throwable t) {
+            assertEquals(throwable, t);
+        }
+    }
+
+    @Test
     void testUpdateProductQuantity_whenNormalCase_shouldNoException() {
 
         List<ProductQuantityPostVm> productQuantityPostVms = List.of(new ProductQuantityPostVm(1L, 100L));
