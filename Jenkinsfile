@@ -318,9 +318,7 @@ pipeline {
                                     // -d: optional verbose logs; remove after CI stable.
                                     sh "snyk test -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --severity-threshold=high || snyk test -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects || snyk test -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --severity-threshold=high --all-sub-projects --max-depth=3 || true"
                                 }
-                                for (mod in serviceModules) {
-                                    sh "snyk monitor -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --project-name=yas-${mod} || snyk monitor -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects || snyk monitor -d --maven-skip-wrapper --org=${snykOrg} --file=${mod}/pom.xml --project-name=yas-${mod} --all-sub-projects --max-depth=3 || true"
-                                }
+                                echo "Snyk monitor: skipped for CD validation; dependency scanning remains covered by snyk test."
                             }
                         }
                     }
