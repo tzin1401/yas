@@ -2,7 +2,7 @@
 
 ## Objective
 
-Build the Lab 2 CD layer for the existing `tzin1401/yas` fork. The platform must preserve Lab 1 CI gates, build Docker Hub images for changed services, and deploy YAS to Kubernetes through GitOps-managed `dev`, `staging`, and `developer` environments. The current runtime target is a single Google Cloud Compute Engine VM with 32 GB RAM running `kubeadm` single-node Kubernetes.
+Build the Lab 2 CD layer for the existing `tzin1401/yas` fork. The platform must preserve Lab 1 CI gates, build Docker Hub images for changed services, and deploy YAS to Kubernetes through GitOps-managed `dev`, `staging`, and `developer` environments. The current runtime target is a single Google Cloud Compute Engine VM with 32 GB RAM running `k3s` single-node Kubernetes (node `gcp-ci-cd-agent`), originally planned as `kubeadm` — see ADR-003 update in `docs/project02/architecture-fix-notes.md`.
 
 ## Users
 
@@ -24,7 +24,7 @@ Build the Lab 2 CD layer for the existing `tzin1401/yas` fork. The platform must
 - FR-010: `teardown_developer` must remove developer resources through GitOps/ArgoCD prune.
 - FR-011: GitOps/docs/spec/agent-only commits must skip full Maven/image pipeline.
 - FR-012: Service mesh evidence must show mTLS, authorization allow/deny, retry, and Kiali topology.
-- FR-013: The cluster runbook must provision a GCP VM based `kubeadm` single-node cluster without Tailscale.
+- FR-013: The cluster runbook must provision a GCP VM based single-node cluster without Tailscale (implemented with `k3s`; originally specified as `kubeadm`).
 - FR-014: Admin interfaces must be accessed through SSH tunnels or firewall allowlisting, not broad public exposure.
 
 ## Non-Functional Requirements

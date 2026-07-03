@@ -6,7 +6,7 @@ This folder contains upstream YAS platform setup scripts and Helm values. For La
 
 - Google Cloud Compute Engine VM, 32 GB RAM.
 - Ubuntu 24.04 LTS.
-- `kubeadm` single-node Kubernetes.
+- `k3s` single-node Kubernetes (node `gcp-ci-cd-agent`); originally planned as `kubeadm`.
 - Default StorageClass: `local-path`.
 - No Tailscale.
 

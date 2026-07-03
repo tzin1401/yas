@@ -6,7 +6,7 @@ Lab 1 đã có Jenkins CI với changed-module detection, Gitleaks, test, JaCoCo
 
 Version source of truth: giữ Java 25 + Spring Boot 4.0.2 theo repo hiện tại. Không downgrade về Java 21/Spring Boot 3.2 trừ khi cả nhóm cập nhật lại `docs/project02/project-version.md`.
 
-Runtime source of truth: một Google Cloud Compute Engine VM 32 GB RAM, Ubuntu 24.04 LTS, `kubeadm` single-node Kubernetes. Không dùng Tailscale.
+Runtime source of truth: một Google Cloud Compute Engine VM 32 GB RAM, Ubuntu 24.04 LTS, `k3s` single-node Kubernetes (node `gcp-ci-cd-agent`, `v1.35.5+k3s1`). Ban đầu plan là `kubeadm`, TX đã đổi sang `k3s` khi provision — xem cập nhật ADR-003 trong `architecture-fix-notes.md`. Không dùng Tailscale.
 
 ## Hard Rules
 
@@ -21,7 +21,7 @@ Runtime source of truth: một Google Cloud Compute Engine VM 32 GB RAM, Ubuntu 
 
 | Member | Role | Scope | Done When |
 |---|---|---|---|
-| Trí Xuân | CD + Cluster Owner | GCP VM, firewall, kubeadm, local-path, ingress, ArgoCD/Istio platform | VM/cluster chạy được, ArgoCD Healthy, mesh evidence, demo developer_build |
+| Trí Xuân | CD + Cluster Owner | GCP VM, firewall, k3s, local-path, ingress, ArgoCD/Istio platform | VM/cluster chạy được, ArgoCD Healthy, mesh evidence, demo developer_build |
 | Vinh Nhỏ | Jenkins + Image Pipeline Owner | Jenkinsfile, Jenkins jobs, Docker Hub image pipeline, credentials binding | CI/CD jobs chạy được, image tag đúng, deploy/rollback/smoke job có log |
 | Vinh Bự | GitOps + Security + Report Owner | GitOps manifests, K8s policy/security audit, report/evidence | Overlays/app YAML đúng, secret/RBAC audit, báo cáo hoàn chỉnh |
 
@@ -44,7 +44,7 @@ Evidence:
 - Firewall rule screenshot/command.
 - `free -h`, `df -h`, `lsb_release -a`.
 
-### TX-2: Setup kubeadm Single-Node
+### TX-2: Setup k3s Single-Node (originally planned as kubeadm)
 
 Follow `docs/project02/cluster-runbook.md`.
 
@@ -58,7 +58,7 @@ Acceptance:
 Evidence:
 
 - `kubectl get nodes -o wide`
-- `kubectl describe node yas-gcp-single-node`
+- `kubectl describe node gcp-ci-cd-agent`
 - `kubectl get storageclass,pvc -A`
 
 ### TX-3: Setup Ingress And ArgoCD

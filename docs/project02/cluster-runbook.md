@@ -3,7 +3,7 @@
 ## Target Topology
 
 - One Google Cloud Compute Engine VM runs Kubernetes, Jenkins tooling, ArgoCD, ingress, mesh, and YAS workloads.
-- Kubernetes distribution: `kubeadm` single-node.
+- Kubernetes distribution: `k3s` single-node (control-plane node name `gcp-ci-cd-agent`, `v1.35.5+k3s1`). Originally planned as `kubeadm` — TX switched to `k3s` during provisioning; see ADR-003 update in `architecture-fix-notes.md`. The `kubeadm`-specific steps below (kubeadm init, apt repo, taint removal) do not apply; k3s installs via its own single-command installer and does not taint the control-plane node.
 - OS: Ubuntu 24.04 LTS.
 - VM size: 32 GB RAM, recommended 4-8 vCPU, 150 GB+ persistent disk.
 - Tailscale is not used.
@@ -91,26 +91,25 @@ EOF
 sudo sysctl --system
 ```
 
-Install `kubeadm`, `kubelet`, and `kubectl` from the official Kubernetes apt repository, then install Helm and any CI/CD CLIs required by Jenkins.
+Actual bootstrap used `k3s` instead of `kubeadm`/`kubelet` apt packages. Install Helm and any CI/CD CLIs required by Jenkins in addition to the k3s install below.
 
 ## Kubernetes Bootstrap
 
-On the VM:
+On the VM (as actually run — k3s, not kubeadm):
 
 ```bash
-sudo kubeadm init \
-  --apiserver-advertise-address=${GCP_VM_INTERNAL_IP} \
-  --apiserver-cert-extra-sans=${GCP_VM_INTERNAL_IP},${GCP_VM_EXTERNAL_IP} \
-  --pod-network-cidr=10.244.0.0/16 \
-  --node-name=yas-gcp-single-node
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
+  --node-name=gcp-ci-cd-agent \
+  --tls-san=${GCP_VM_INTERNAL_IP} --tls-san=${GCP_VM_EXTERNAL_IP}" sh -
 
 mkdir -p "$HOME/.kube"
-sudo cp -i /etc/kubernetes/admin.conf "$HOME/.kube/config"
+sudo cp -i /etc/rancher/k3s/k3s.yaml "$HOME/.kube/config"
 sudo chown "$(id -u):$(id -g)" "$HOME/.kube/config"
-
-kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
-kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true
 ```
+
+k3s ships its own bundled CNI (flannel VXLAN by default) and does **not** taint the control-plane node, so the `kubectl taint nodes --all node-role.kubernetes.io/control-plane-` step used by kubeadm is not needed here — workloads schedule on the single node immediately.
+
+Note: k3s bundles Traefik as its default ingress controller. This deployment removed it (`helm-delete-traefik` job visible in `kube-system`) in favor of the Nginx Ingress installed later in this runbook, to match the documented `30080/30081` NodePort design.
 
 Verify:
 
@@ -231,7 +230,7 @@ Capture:
 - SSH tunnel command or screenshot for admin UI access.
 - Tool version gate output for `yq`, `helm`, `kustomize`, `kubectl`, `argocd`, and `istioctl`
 - `kubectl get nodes -o wide`
-- `kubectl describe node yas-gcp-single-node`
+- `kubectl describe node gcp-ci-cd-agent`
 - `kubectl get pods -A`
 - `kubectl get storageclass,pvc -A`
 - ArgoCD apps `Synced/Healthy`

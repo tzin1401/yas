@@ -5,7 +5,7 @@
 | Milestone | Output |
 |---|---|
 | M0 | Source-of-truth docs/spec/agent context updated for GCP VM |
-| M1 | GCP VM, firewall, kubeadm single-node, local-path storage |
+| M1 | GCP VM, firewall, k3s single-node, local-path storage |
 | M2 | Ingress, ArgoCD, GitOps apps |
 | M3 | Jenkins CD jobs and Docker Hub image tags |
 | M4 | Developer/dev/staging deployment evidence |
@@ -46,13 +46,13 @@ Firewall:
 - Demo app ports only for required audience.
 - Admin ports restricted or tunneled.
 
-Bootstrap:
+Bootstrap (actual: k3s, not kubeadm — see ADR-003 update in `architecture-fix-notes.md`):
 
-- Install `containerd`, `kubeadm`, `kubelet`, `kubectl`, Helm, `yq`, Git.
-- Run kubeadm init.
-- Install Flannel.
-- Remove control-plane taint.
-- Install local-path provisioner.
+- Install `containerd` (bundled with k3s), `kubectl`, Helm, `yq`, Git.
+- Run the k3s single-command installer (`curl -sfL https://get.k3s.io | sh -`), node name `gcp-ci-cd-agent`.
+- k3s bundles its own CNI (flannel VXLAN) — no separate Flannel manifest apply needed.
+- No control-plane taint to remove; k3s does not taint the node by default.
+- Install local-path provisioner (k3s ships one by default, named `local-path`; confirm it matches the required config rather than reinstalling).
 
 Acceptance:
 

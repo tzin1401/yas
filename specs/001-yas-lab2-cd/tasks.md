@@ -37,13 +37,13 @@
 
 ## Phase 5 - GCP Cluster And Mesh Evidence
 
-- [ ] Provision one 32 GB Google Cloud VM and reserve or record its external IP.
-- [ ] Configure GCP firewall: app/demo ports as needed; admin UI ports restricted to SSH tunnel or admin IP allowlist.
+- [x] Provision one 32 GB Google Cloud VM and reserve or record its external IP.
+- [ ] Configure GCP firewall: app/demo ports as needed; admin UI ports restricted to SSH tunnel or admin IP allowlist. (Verify 2026-07-03: port 22 was unreachable until VN added a firewall rule for a team member's IP; recheck 30080/30444 allowlisting is scoped to admin IPs only, not `0.0.0.0/0`.)
 - [ ] Verify required tools on the VM/Jenkins host: `yq`, `helm`, `kustomize`, `kubectl`, `argocd`, `istioctl`.
-- [ ] Execute kubeadm single-node cluster runbook on the VM.
-- [ ] Remove the control-plane taint so workloads can schedule on the single node.
-- [ ] Install local-path storage, ingress, ArgoCD, Istio, and Kiali.
-- [ ] Label the selected mesh namespace, restart deployments, and verify pods become `READY 2/2`.
+- [x] Execute single-node cluster runbook on the VM — implemented with `k3s` (`v1.35.5+k3s1`), not `kubeadm` as originally planned. See ADR-003 update in `docs/project02/architecture-fix-notes.md`.
+- [x] Control-plane taint: not applicable — k3s does not taint the control-plane node by default; confirmed workloads scheduling via `kubectl get pods -A`.
+- [x] Install local-path storage, ingress, ArgoCD, Istio, and Kiali — confirmed running (`kubectl get pods -A` shows `ingress-nginx`, `argocd`, `istio-system` namespaces healthy).
+- [ ] Label the selected mesh namespace, restart deployments, and verify pods become `READY 2/2`. (Partially observed: `mesh-demo` namespace has `location` and `tax` pods at `2/2`; confirm with TX whether `mesh-demo` is the final scope or `dev` should also be mesh-labeled.)
 - [ ] Capture required evidence logs/screenshots.
 
 ## Checkpoint

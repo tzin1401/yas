@@ -20,13 +20,15 @@ File này dùng khi review, chia task, hoặc viết phần "vấn đề gặp p
 
 **Consequence:** Tất cả runbook/evidence dùng `GCP_VM_EXTERNAL_IP` và `GCP_VM_INTERNAL_IP`, không dùng biến IP master/worker của network cũ.
 
-### ADR-003 - kubeadm single-node
+### ADR-003 - kubeadm single-node (superseded 2026-07-03: đã dùng k3s)
 
-**Decision:** Dùng `kubeadm` single-node trên Ubuntu 24.04 LTS; remove control-plane taint để chạy workload.
+**Decision (ban đầu):** Dùng `kubeadm` single-node trên Ubuntu 24.04 LTS; remove control-plane taint để chạy workload.
 
 **Reason:** Sát với plan kubeadm hiện có, nhưng phù hợp với một VM 32 GB.
 
 **Consequence:** Evidence sẽ có một node Ready. Storage và capacity phải ghi rõ single-node lab limitation.
+
+**Cập nhật thực tế (2026-07-03):** TX đã cài cluster bằng `k3s` (`v1.35.5+k3s1`) thay vì `kubeadm`, xác nhận qua `kubectl get nodes -o wide` chạy trực tiếp trên VM (node name `gcp-ci-cd-agent`, role `control-plane`, `containerd://2.2.3-k3s1`). k3s không tự taint control-plane nên workload chạy được ngay, không cần bước `kubectl taint nodes --all node-role.kubernetes.io/control-plane-`. Toàn bộ lệnh/bootstrap tham chiếu `kubeadm init` hoặc node name `yas-gcp-single-node` trong các doc khác (cluster-runbook.md, solution-approach-fixed.md, development-roadmap-fixed.md, agent-task-assignment-prompt.md, specs/001-yas-lab2-cd/*) cần đọc là **k3s** / node **`gcp-ci-cd-agent`**. Cần team confirm đây là quyết định chính thức để khỏi phải sửa lại lần nữa.
 
 ### ADR-004 - Storage single-node
 
@@ -113,7 +115,7 @@ Browser/curl
 
 | Thành viên | Task |
 |---|---|
-| A | GCP VM, firewall, kubeadm single-node, local-path, ingress |
+| A | GCP VM, firewall, k3s single-node, local-path, ingress |
 | B | Jenkins custom image/agent, CI Jenkinsfile, DockerHub |
 | C | GitOps repo, Kustomize, ArgoCD apps |
 | D | Istio, Kiali, mTLS, AuthorizationPolicy, retry evidence |
@@ -125,8 +127,8 @@ Browser/curl
 [ ] GCP VM đúng 32 GB-class RAM
 [ ] Firewall không mở admin UI rộng
 [ ] SSH tunnel/admin-IP access cho Jenkins/ArgoCD/Kiali
-[ ] Kubernetes single node Ready
-[ ] Control-plane taint removed
+[ ] Kubernetes single node Ready (k3s, node gcp-ci-cd-agent)
+[ ] Control-plane taint removed (n/a for k3s — no default taint; confirm workloads schedule without it)
 [ ] StorageClass local-path default
 [ ] ArgoCD app Synced/Healthy
 [ ] Jenkins không kubectl set image vào namespace do ArgoCD quản lý

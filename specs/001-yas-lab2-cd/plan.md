@@ -7,7 +7,7 @@
 - Use Docker Hub for Lab 2 images.
 - Use GitOps as the source of truth for `dev`, `staging`, and `developer`.
 - Use one Google Cloud Compute Engine VM with 32 GB RAM.
-- Use `kubeadm` single-node Kubernetes; remove the control-plane taint so YAS workloads can run on the same node.
+- Use `k3s` single-node Kubernetes (node `gcp-ci-cd-agent`); originally planned as `kubeadm` (see ADR-003 update in `docs/project02/architecture-fix-notes.md`). k3s does not taint the control-plane node by default, so no taint-removal step is needed for YAS workloads to run on the same node.
 - Use local-path dynamic storage for the lab. Document it as single-node and non-production.
 - Do not use Tailscale. Admin UIs use SSH tunnel or GCP firewall allowlisting.
 
@@ -18,7 +18,7 @@
 3. GitOps skeleton: keep base/overlays and ArgoCD app manifests; render overlays before committing.
 4. Jenkins skip-CI: keep docs/GitOps/spec-only commits on lightweight validation.
 5. Jenkins CD: extend image build/push and parameterized jobs without direct namespace mutation.
-6. Cluster runbook: document GCP VM provisioning, kubeadm single-node, local-path storage, ingress, ArgoCD, admin access, and evidence commands.
+6. Cluster runbook: document GCP VM provisioning, k3s single-node, local-path storage, ingress, ArgoCD, admin access, and evidence commands.
 7. Mesh runbook: document Istio/Kiali policies and retry evidence for the single-node cluster.
 
 ## Jenkins Jobs

@@ -12,7 +12,7 @@ Developer
      -> Docker Hub image tags
      -> GitOps overlay commit
   -> ArgoCD sync
-  -> GCP VM kubeadm single-node Kubernetes
+  -> GCP VM k3s single-node Kubernetes (node gcp-ci-cd-agent; originally planned as kubeadm)
      -> dev/staging/developer namespaces
      -> Nginx Ingress for basic demo
      -> Istio IngressGateway for mesh demo
@@ -29,7 +29,7 @@ OS: Ubuntu 24.04 LTS
 RAM: 32 GB
 CPU: 4-8 vCPU recommended
 Disk: 150 GB+ persistent disk
-Kubernetes: kubeadm single-node
+Kubernetes: k3s single-node (node gcp-ci-cd-agent, v1.35.5+k3s1 — originally planned as kubeadm, see ADR-003 update)
 Storage: local-path provisioner
 ```
 
@@ -70,19 +70,19 @@ Use `docs/project02/cluster-runbook.md` as the command source.
 
 Critical points:
 
-- Install and configure `containerd`.
+Actual: installed `k3s` (not kubeadm) via the single-command installer:
+
+- k3s bundles `containerd`, its own CNI (flannel VXLAN), and a local-path provisioner by default.
 - Disable swap.
-- Run `kubeadm init` with `--apiserver-advertise-address=${GCP_VM_INTERNAL_IP}`.
-- Include both internal and external IP in `--apiserver-cert-extra-sans`.
-- Install Flannel.
-- Run `kubectl taint nodes --all node-role.kubernetes.io/control-plane- || true`.
-- Install local-path provisioner and make it default.
+- Run `curl -sfL https://get.k3s.io | sh -` with `--node-name=gcp-ci-cd-agent` and `--tls-san` set to both internal and external IP.
+- No control-plane taint to remove; k3s schedules workloads on the node by default.
+- Confirm local-path provisioner is set as default StorageClass (k3s installs one named `local-path` out of the box).
 
 Success evidence:
 
 ```bash
 kubectl get nodes -o wide
-kubectl describe node yas-gcp-single-node
+kubectl describe node gcp-ci-cd-agent
 kubectl get pods -A
 kubectl get storageclass,pvc -A
 ```

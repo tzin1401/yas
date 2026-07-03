@@ -11,8 +11,15 @@
 ## Deployment Platform Decision
 
 - Current Lab 2 runtime target: one Google Cloud Compute Engine VM with 32 GB RAM.
-- Kubernetes: `kubeadm` single-node on Ubuntu 24.04 LTS.
+- Kubernetes: `k3s` single-node on Ubuntu 24.04 LTS, control-plane node name `gcp-ci-cd-agent` (`v1.35.5+k3s1`). Originally planned as `kubeadm`; TX switched to `k3s` during provisioning for a lighter single-node install. See ADR-003 update in `architecture-fix-notes.md`.
 - Network: no Tailscale; use the VM external IP, GCP firewall, hosts-file DNS for demo names, and SSH tunnels or admin-IP allowlisting for admin UIs.
+
+## Verified Cluster State (2026-07-03)
+
+- Confirmed via `kubectl get nodes -o wide` over SSH: single node `gcp-ci-cd-agent`, `Ready`, `control-plane` role, `containerd://2.2.3-k3s1`.
+- Namespaces present: `argocd`, `dev`, `staging`, `developer`, `mesh-demo`, `ingress-nginx`, `istio-system`, plus shared platform namespaces (`postgres`, `redis`, `keycloak`, `kafka`, `elasticsearch`).
+- `mesh-demo` namespace is not documented elsewhere in `docs/project02/`; confirm its purpose/scope with TX before including it in the final report.
+- `dev` namespace has running application pods; `staging`/`developer` namespaces exist but had no application pods yet at verification time — check ArgoCD Application sync/health before relying on this.
 
 ## Production Reality Note
 

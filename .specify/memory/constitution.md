@@ -20,7 +20,7 @@ Feature/developer images use commit SHA tags. `main` may publish `main` and `lat
 
 ### V. GCP Single-Node Lab Boundary Must Be Explicit
 
-The Lab 2 runtime target is a single Google Cloud Compute Engine VM with 32 GB RAM running `kubeadm` single-node Kubernetes. NodePort demo access, hosts-file DNS, local-path storage, demo credentials, and Jenkins Docker access are acceptable for this course lab only. Tailscale is not part of the current target. Production notes must call out real DNS/TLS, least-privilege RBAC, external or encrypted secrets, isolated builders, managed or CSI-backed storage, and restricted admin access.
+The Lab 2 runtime target is a single Google Cloud Compute Engine VM with 32 GB RAM running `k3s` single-node Kubernetes (node `gcp-ci-cd-agent`), originally planned as `kubeadm` — see ADR-003 update in `docs/project02/architecture-fix-notes.md`. NodePort demo access, hosts-file DNS, local-path storage, demo credentials, and Jenkins Docker access are acceptable for this course lab only. Tailscale is not part of the current target. Production notes must call out real DNS/TLS, least-privilege RBAC, external or encrypted secrets, isolated builders, managed or CSI-backed storage, and restricted admin access.
 
 ## Technical Constraints
 
@@ -28,7 +28,7 @@ The Lab 2 runtime target is a single Google Cloud Compute Engine VM with 32 GB R
 - Branch: `lab2/cd-platform`
 - Java/Spring decision: keep Java 25 and Spring Boot 4.0.2 from the current fork; document deviation from the assignment.
 - Container registry: Docker Hub, format `docker.io/$DOCKERHUB_USERNAME/yas-<service>:<tag>`.
-- Kubernetes runtime: one GCP Compute Engine VM, Ubuntu 24.04 LTS, `kubeadm` single-node, default local-path StorageClass.
+- Kubernetes runtime: one GCP Compute Engine VM, Ubuntu 24.04 LTS, `k3s` single-node (node `gcp-ci-cd-agent`), default local-path StorageClass.
 - Kubernetes access ports: app/demo Nginx `30080/30081`, Istio `30090/30490`; ArgoCD `30444` and Kiali `30201` are admin-only via SSH tunnel or firewall allowlist.
 - Required environments: `dev`, `staging`, `developer`.
 
@@ -45,4 +45,4 @@ The Lab 2 runtime target is a single Google Cloud Compute Engine VM with 32 GB R
 
 This constitution overrides local convenience. Any change that bypasses GitOps, weakens CI gates, changes the Java/Spring version decision, reintroduces Tailscale as the Lab 2 network path, exposes admin UIs broadly, or introduces committed secrets must be rejected unless a new ADR is added under `docs/project02/` and approved by the team.
 
-**Version**: 1.1.0 | **Ratified**: 2026-06-11 | **Last Amended**: 2026-06-22
+**Version**: 1.2.0 | **Ratified**: 2026-06-11 | **Last Amended**: 2026-07-03
