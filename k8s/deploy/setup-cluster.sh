@@ -12,22 +12,13 @@ helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm
 helm repo add jetstack https://charts.jetstack.io
 helm repo update
 
-# Read configuration value from cluster-config.yaml or a local override.
-CONFIG_FILE="${YAS_CLUSTER_CONFIG:-./cluster-config.yaml}"
-if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo "Missing config file: $CONFIG_FILE" >&2
-  exit 1
-fi
-
-DOMAIN="$(yq -r '.domain' "$CONFIG_FILE")"
-POSTGRESQL_REPLICAS="$(yq -r '.postgresql.replicas' "$CONFIG_FILE")"
-POSTGRESQL_USERNAME="$(yq -r '.postgresql.username' "$CONFIG_FILE")"
-POSTGRESQL_PASSWORD="$(yq -r '.postgresql.password' "$CONFIG_FILE")"
-KAFKA_REPLICAS="$(yq -r '.kafka.replicas' "$CONFIG_FILE")"
-ZOOKEEPER_REPLICAS="$(yq -r '.zookeeper.replicas' "$CONFIG_FILE")"
-ELASTICSEARCH_REPLICAES="$(yq -r '.elasticsearch.replicas' "$CONFIG_FILE")"
-GRAFANA_USERNAME="$(yq -r '.grafana.username' "$CONFIG_FILE")"
-GRAFANA_PASSWORD="$(yq -r '.grafana.password' "$CONFIG_FILE")"
+#Read configuration value from cluster-config.yaml file
+read -rd '' DOMAIN POSTGRESQL_REPLICAS POSTGRESQL_USERNAME POSTGRESQL_PASSWORD \
+KAFKA_REPLICAS ZOOKEEPER_REPLICAS ELASTICSEARCH_REPLICAES \
+GRAFANA_USERNAME GRAFANA_PASSWORD \
+< <(yq -r '.domain, .postgresql.replicas, .postgresql.username,
+ .postgresql.password, .kafka.replicas, .zookeeper.replicas,
+ .elasticsearch.replicas, .grafana.username, .grafana.password' ./cluster-config.yaml)
 
 # Install the postgres-operator
 helm upgrade --install postgres-operator postgres-operator-charts/postgres-operator \

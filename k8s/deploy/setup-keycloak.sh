@@ -1,21 +1,14 @@
-#!/usr/bin/env bash
-set -euo pipefail
+
 set -x
 
-# Read configuration value from cluster-config.yaml or a local override.
-CONFIG_FILE="${YAS_CLUSTER_CONFIG:-./cluster-config.yaml}"
-if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo "Missing config file: $CONFIG_FILE" >&2
-  exit 1
-fi
-
-DOMAIN="$(yq -r '.domain' "$CONFIG_FILE")"
-POSTGRESQL_USERNAME="$(yq -r '.postgresql.username' "$CONFIG_FILE")"
-POSTGRESQL_PASSWORD="$(yq -r '.postgresql.password' "$CONFIG_FILE")"
-BOOTSTRAP_ADMIN_USERNAME="$(yq -r '.keycloak.bootstrapAdmin.username' "$CONFIG_FILE")"
-BOOTSTRAP_ADMIN_PASSWORD="$(yq -r '.keycloak.bootstrapAdmin.password' "$CONFIG_FILE")"
-KEYCLOAK_BACKOFFICE_REDIRECT_URL="$(yq -r '.keycloak.backofficeRedirectUrl' "$CONFIG_FILE")"
-KEYCLOAK_STOREFRONT_REDIRECT_URL="$(yq -r '.keycloak.storefrontRedirectUrl' "$CONFIG_FILE")"
+#Read configuration value from cluster-config.yaml file
+read -rd '' DOMAIN POSTGRESQL_USERNAME POSTGRESQL_PASSWORD \
+BOOTSTRAP_ADMIN_USERNAME BOOTSTRAP_ADMIN_PASSWORD \
+KEYCLOAK_BACKOFFICE_REDIRECT_URL KEYCLOAK_STOREFRONT_REDIRECT_URL \
+< <(yq -r '.domain,
+  .postgresql.username, .postgresql.password,
+  .keycloak.bootstrapAdmin.username, .keycloak.bootstrapAdmin.password,
+  .keycloak.backofficeRedirectUrl, .keycloak.storefrontRedirectUrl' ./cluster-config.yaml)
 
 #Install CRD keycloak
 kubectl create namespace keycloak
