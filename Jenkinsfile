@@ -33,14 +33,6 @@ pipeline {
         disableConcurrentBuilds()
     }
 
-    parameters {
-        booleanParam(
-            name: 'DEPLOY_TO_DEVELOPER',
-            defaultValue: false,
-            description: 'Disabled for the current Lab 2 runtime policy; feature branches only build/push images.'
-        )
-    }
-
     environment {
         COVERAGE_THRESHOLD       = '70'
         SONAR_HOST_URL           = 'http://3.27.92.213:9000'
@@ -291,7 +283,19 @@ pipeline {
                 expression { env.CHANGED_MODULES != '__skip_full_ci__' }
             }
             steps {
-                echo "Snyk: temporarily skipped for CD validation; restore after dev deployment is stable."
+                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                    sh '''#!/usr/bin/env bash
+                        set -euo pipefail
+
+                        IFS=',' read -r -a modules <<< "${CHANGED_MODULES}"
+                        for module in "${modules[@]}"; do
+                            [ -n "$module" ] || continue
+                            [ -f "${module}/pom.xml" ] || continue
+                            echo "Snyk: scanning ${module}"
+                            snyk test --file="${module}/pom.xml" --package-manager=maven
+                        done
+                    '''
+                }
             }
         }
 
