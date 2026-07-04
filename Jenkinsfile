@@ -460,22 +460,6 @@ BASH
 
                                 commit_tag="$(cat .ci-image-tag)"
 
-                                if is_release_tag; then
-                                    maven_modules=()
-                                    while IFS= read -r service_name; do
-                                        [ -n "$service_name" ] || continue
-                                        service_type="$(service_field "$service_name" type)"
-                                        [ "$service_type" = "ui" ] && continue
-                                        maven_modules+=("$(service_field "$service_name" path)")
-                                    done < .ci-deployable-services
-
-                                    if [ "${#maven_modules[@]}" -gt 0 ]; then
-                                        pl_arg="$(IFS=,; echo "${maven_modules[*]}")"
-                                        echo "Release tag ${TAG_NAME}: packaging backend/BFF modules before full image build: ${pl_arg}"
-                                        mvn -B -ntp -DskipTests -pl "$pl_arg" -am package
-                                    fi
-                                fi
-
                                 echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
                                 while IFS= read -r service_name; do
@@ -485,6 +469,15 @@ BASH
                                     service_path="$(service_field "$service_name" path)"
                                     image_name="$(service_field "$service_name" imageName)"
                                     image_ref="docker.io/${DOCKERHUB_USERNAME}/${image_name}"
+
+                                    if is_release_tag; then
+                                        echo "Release tag ${TAG_NAME}: promoting existing ${image_ref}:${commit_tag} to ${image_ref}:${TAG_NAME}"
+                                        docker buildx imagetools inspect "${image_ref}:${commit_tag}" >/dev/null
+                                        docker buildx imagetools create \
+                                            -t "${image_ref}:${TAG_NAME}" \
+                                            "${image_ref}:${commit_tag}"
+                                        continue
+                                    fi
 
                                     echo "Building ${service_name}: ${image_ref}:${commit_tag}"
                                     docker build -f "$dockerfile" -t "${image_ref}:${commit_tag}" "$service_path"
@@ -497,10 +490,6 @@ BASH
                                         docker push "${image_ref}:latest"
                                     fi
 
-                                    if [ -n "${TAG_NAME:-}" ] && echo "${TAG_NAME}" | grep -Eq '^v[0-9]+\\.[0-9]+\\.[0-9]+([-.][0-9A-Za-z.-]+)?$'; then
-                                        docker tag "${image_ref}:${commit_tag}" "${image_ref}:${TAG_NAME}"
-                                        docker push "${image_ref}:${TAG_NAME}"
-                                    fi
                                 done < .ci-deployable-services
 BASH
                             '''
