@@ -37,7 +37,7 @@ pipeline {
         booleanParam(
             name: 'DEPLOY_TO_DEVELOPER',
             defaultValue: false,
-            description: 'For feature branches, update the developer GitOps overlay after image push.'
+            description: 'Disabled for the current Lab 2 runtime policy; feature branches only build/push images.'
         )
     }
 
@@ -541,11 +541,8 @@ BASH
                                 elif [ "${BRANCH_NAME:-}" = "main" ]; then
                                     target_env="dev"
                                     image_tag="main"
-                                elif [ "${DEPLOY_TO_DEVELOPER:-false}" = "true" ]; then
-                                    target_env="developer"
-                                    image_tag="${commit_tag}"
                                 else
-                                    echo "Feature branch image pushed, but DEPLOY_TO_DEVELOPER=false; skipping GitOps update."
+                                    echo "Feature branch image pushed. Developer GitOps previews are disabled; skipping GitOps update."
                                     exit 0
                                 fi
 
@@ -562,20 +559,12 @@ BASH
                                     staging)
                                         scripts/promote-staging-release.sh "$image_tag"
                                         ;;
-                                    developer)
-                                        assignments=()
-                                        while IFS= read -r service_name; do
-                                            [ -n "$service_name" ] || continue
-                                            assignments+=("${service_name}=${image_tag}")
-                                        done < ../.ci-deployable-services
-                                        scripts/prepare-developer-preview.sh "${assignments[@]}"
-                                        ;;
                                     dev)
                                         while IFS= read -r service_name; do
                                             [ -n "$service_name" ] || continue
                                             scripts/update-image-tag.sh "$target_env" "$service_name" "$image_tag"
                                         done < ../.ci-deployable-services
-                                        scripts/activate-environment.sh dev
+                                        scripts/activate-environment.sh baseline
                                         ;;
                                     *)
                                         echo "unsupported GitOps target environment: $target_env" >&2
