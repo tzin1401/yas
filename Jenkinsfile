@@ -37,7 +37,7 @@ pipeline {
         booleanParam(
             name: 'DEPLOY_TO_DEVELOPER',
             defaultValue: false,
-            description: 'For feature branches, update the developer GitOps overlay after image push.'
+            description: 'Disabled for the current Lab 2 runtime policy; feature branches only build/push images.'
         )
     }
 
@@ -301,7 +301,10 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('Docker Hub – Build & Push Images') {
             when {
-                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+                expression {
+                    env.CHANGED_MODULES != '__skip_full_ci__' ||
+                    (env.TAG_NAME != null && env.TAG_NAME ==~ /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$/)
+                }
             }
             steps {
                 sh '''bash <<'BASH'
@@ -339,27 +342,60 @@ pipeline {
                         ' services.yaml
                     }
 
+                    list_deployable_services() {
+                        awk '
+                            function reset() {
+                                name = ""; path = ""; dockerfile = ""; imageName = ""; deploy = ""
+                            }
+                            function emit_if_deployable() {
+                                if (name != "" && deploy == "true" && path != "" && dockerfile != "" && imageName != "") {
+                                    print name
+                                }
+                            }
+                            $1 == "-" && $2 == "name:" {
+                                emit_if_deployable()
+                                reset()
+                                name = $3
+                                next
+                            }
+                            $1 == "path:" { path = $2; next }
+                            $1 == "dockerfile:" { dockerfile = $2; next }
+                            $1 == "imageName:" { imageName = $2; next }
+                            $1 == "deploy:" { deploy = $2; next }
+                            END { emit_if_deployable() }
+                        ' services.yaml
+                    }
+
+                    is_release_tag() {
+                        [ -n "${TAG_NAME:-}" ] && echo "${TAG_NAME}" | grep -Eq '^v[0-9]+\\.[0-9]+\\.[0-9]+([-.][0-9A-Za-z.-]+)?$'
+                    }
+
                     commit_tag="$(git rev-parse --short=12 HEAD)"
                     printf '%s' "$commit_tag" > .ci-image-tag
                     : > .ci-deployable-services
 
-                    IFS=',' read -r -a modules <<< "${CHANGED_MODULES}"
-                    for module in "${modules[@]}"; do
-                        [ "$module" = "common-library" ] && continue
-                        [ "$module" = "delivery" ] && continue
+                    if is_release_tag; then
+                        echo "Release tag ${TAG_NAME}: selecting all deployable services for atomic staging release."
+                        list_deployable_services > .ci-deployable-services
+                    else
+                        IFS=',' read -r -a modules <<< "${CHANGED_MODULES}"
+                        for module in "${modules[@]}"; do
+                            [ "$module" = "common-library" ] && continue
+                            [ "$module" = "delivery" ] && continue
 
-                        service_name="$(service_field "$module" name)"
-                        [ -n "$service_name" ] || continue
+                            service_name="$(service_field "$module" name)"
+                            [ -n "$service_name" ] || continue
 
-                        dockerfile="$(service_field "$service_name" dockerfile)"
-                        service_path="$(service_field "$service_name" path)"
-                        image_name="$(service_field "$service_name" imageName)"
-                        [ -n "$dockerfile" ] && [ "$dockerfile" != "null" ] || continue
-                        [ -n "$service_path" ] && [ "$service_path" != "null" ] || continue
-                        [ -n "$image_name" ] && [ "$image_name" != "null" ] || continue
+                            dockerfile="$(service_field "$service_name" dockerfile)"
+                            service_path="$(service_field "$service_name" path)"
+                            image_name="$(service_field "$service_name" imageName)"
+                            [ -n "$dockerfile" ] && [ "$dockerfile" != "null" ] || continue
+                            [ -n "$service_path" ] && [ "$service_path" != "null" ] || continue
+                            [ -n "$image_name" ] && [ "$image_name" != "null" ] || continue
 
-                        echo "$service_name" >> .ci-deployable-services
-                    done
+                            echo "$service_name" >> .ci-deployable-services
+                        done
+                    fi
 
                     if [ ! -s .ci-deployable-services ]; then
                         echo "No deployable service image was selected for CHANGED_MODULES=${CHANGED_MODULES}."
@@ -387,15 +423,14 @@ BASH
                                     local selector="$1"
                                     local field="$2"
                                     awk -v selector="$selector" -v field="$field" '
-                                        function reset() {
-                                            name = ""; path = ""; dockerfile = ""; imageName = ""; deploy = ""
-                                        }
+                                        function reset() { name = ""; path = ""; dockerfile = ""; imageName = ""; deploy = ""; type = "" }
                                         function emit_if_match() {
                                             if (!emitted && (name == selector || path == selector) && deploy == "true") {
                                                 if (field == "name") print name
                                                 else if (field == "path") print path
                                                 else if (field == "dockerfile") print dockerfile
                                                 else if (field == "imageName") print imageName
+                                                else if (field == "type") print type
                                                 emitted = 1
                                                 exit
                                             }
@@ -409,12 +444,34 @@ BASH
                                         $1 == "path:" { path = $2; next }
                                         $1 == "dockerfile:" { dockerfile = $2; next }
                                         $1 == "imageName:" { imageName = $2; next }
+                                        $1 == "type:" { type = $2; next }
                                         $1 == "deploy:" { deploy = $2; next }
                                         END { emit_if_match() }
                                     ' services.yaml
                                 }
 
+                                is_release_tag() {
+                                    [ -n "${TAG_NAME:-}" ] && echo "${TAG_NAME}" | grep -Eq '^v[0-9]+\\.[0-9]+\\.[0-9]+([-.][0-9A-Za-z.-]+)?$'
+                                }
+
                                 commit_tag="$(cat .ci-image-tag)"
+
+                                if is_release_tag; then
+                                    maven_modules=()
+                                    while IFS= read -r service_name; do
+                                        [ -n "$service_name" ] || continue
+                                        service_type="$(service_field "$service_name" type)"
+                                        [ "$service_type" = "ui" ] && continue
+                                        maven_modules+=("$(service_field "$service_name" path)")
+                                    done < .ci-deployable-services
+
+                                    if [ "${#maven_modules[@]}" -gt 0 ]; then
+                                        pl_arg="$(IFS=,; echo "${maven_modules[*]}")"
+                                        echo "Release tag ${TAG_NAME}: packaging backend/BFF modules before full image build: ${pl_arg}"
+                                        mvn -B -ntp -DskipTests -pl "$pl_arg" -am package
+                                    fi
+                                fi
+
                                 echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
                                 while IFS= read -r service_name; do
@@ -457,7 +514,10 @@ BASH
         // ══════════════════════════════════════════════════════
         stage('GitOps – Update CD Repo') {
             when {
-                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+                expression {
+                    env.CHANGED_MODULES != '__skip_full_ci__' ||
+                    (env.TAG_NAME != null && env.TAG_NAME ==~ /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$/)
+                }
             }
             steps {
                 script {
@@ -481,11 +541,8 @@ BASH
                                 elif [ "${BRANCH_NAME:-}" = "main" ]; then
                                     target_env="dev"
                                     image_tag="main"
-                                elif [ "${DEPLOY_TO_DEVELOPER:-false}" = "true" ]; then
-                                    target_env="developer"
-                                    image_tag="${commit_tag}"
                                 else
-                                    echo "Feature branch image pushed, but DEPLOY_TO_DEVELOPER=false; skipping GitOps update."
+                                    echo "Feature branch image pushed. Developer GitOps previews are disabled; skipping GitOps update."
                                     exit 0
                                 fi
 
@@ -498,10 +555,22 @@ BASH
 
                                 cp ../services.yaml services.yaml
 
-                                while IFS= read -r service_name; do
-                                    [ -n "$service_name" ] || continue
-                                    scripts/update-image-tag.sh "$target_env" "$service_name" "$image_tag"
-                                done < ../.ci-deployable-services
+                                case "$target_env" in
+                                    staging)
+                                        scripts/promote-staging-release.sh "$image_tag"
+                                        ;;
+                                    dev)
+                                        while IFS= read -r service_name; do
+                                            [ -n "$service_name" ] || continue
+                                            scripts/update-image-tag.sh "$target_env" "$service_name" "$image_tag"
+                                        done < ../.ci-deployable-services
+                                        scripts/activate-environment.sh baseline
+                                        ;;
+                                    *)
+                                        echo "unsupported GitOps target environment: $target_env" >&2
+                                        exit 1
+                                        ;;
+                                esac
 
                                 git status --short
                                 if git diff --quiet; then
