@@ -127,7 +127,13 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('Test') {
             when {
-                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+                // Release tag = promote-only: the tagged commit's images were already
+                // gate-checked by the main build that published them. Re-running
+                // test/scan here would re-verify source, not the promoted binaries.
+                expression {
+                    env.CHANGED_MODULES != '__skip_full_ci__' &&
+                    !(env.TAG_NAME != null && env.TAG_NAME ==~ /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$/)
+                }
             }
             steps {
                 script {
@@ -177,7 +183,13 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('Coverage Gate') {
             when {
-                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+                // Release tag = promote-only: the tagged commit's images were already
+                // gate-checked by the main build that published them. Re-running
+                // test/scan here would re-verify source, not the promoted binaries.
+                expression {
+                    env.CHANGED_MODULES != '__skip_full_ci__' &&
+                    !(env.TAG_NAME != null && env.TAG_NAME ==~ /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$/)
+                }
             }
             steps {
                 script {
@@ -201,7 +213,13 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('Build') {
             when {
-                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+                // Release tag = promote-only: the tagged commit's images were already
+                // gate-checked by the main build that published them. Re-running
+                // test/scan here would re-verify source, not the promoted binaries.
+                expression {
+                    env.CHANGED_MODULES != '__skip_full_ci__' &&
+                    !(env.TAG_NAME != null && env.TAG_NAME ==~ /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$/)
+                }
             }
             steps {
                 script {
@@ -219,7 +237,13 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('SonarQube – Analysis') {
             when {
-                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+                // Release tag = promote-only: the tagged commit's images were already
+                // gate-checked by the main build that published them. Re-running
+                // test/scan here would re-verify source, not the promoted binaries.
+                expression {
+                    env.CHANGED_MODULES != '__skip_full_ci__' &&
+                    !(env.TAG_NAME != null && env.TAG_NAME ==~ /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$/)
+                }
             }
             steps {
                 script {
@@ -254,7 +278,13 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('SonarQube – Quality Gate') {
             when {
-                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+                // Release tag = promote-only: the tagged commit's images were already
+                // gate-checked by the main build that published them. Re-running
+                // test/scan here would re-verify source, not the promoted binaries.
+                expression {
+                    env.CHANGED_MODULES != '__skip_full_ci__' &&
+                    !(env.TAG_NAME != null && env.TAG_NAME ==~ /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$/)
+                }
             }
             steps {
                 script {
