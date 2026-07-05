@@ -534,7 +534,7 @@ BASH
                                     image_tag="${TAG_NAME}"
                                 elif [ "${BRANCH_NAME:-}" = "main" ]; then
                                     target_env="dev"
-                                    image_tag="main"
+                                    image_tag="$commit_tag"
                                 else
                                     echo "Feature branch image pushed. Developer GitOps previews are disabled; skipping GitOps update."
                                     exit 0
