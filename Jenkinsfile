@@ -1,7 +1,7 @@
 // ============================================================
 //  YAS Monorepo – Jenkins CI Pipeline (Merged)
 //  Controller (AWS): orchestration + UI + logs.
-//  Agent (GCP VM): build/test/scan/CD — label: gcp-build-agent
+//  Agents (team laptops): build/test/scan/CD — label: yas-build-worker
 //  SonarQube: http://3.27.92.213:9000
 //  JDK/Maven tools: JDK-25, Maven (Global Tool Configuration)
 // ============================================================
@@ -20,7 +20,7 @@
 
 pipeline {
     agent {
-        label 'gcp-build-agent'
+        label 'yas-build-worker'
     }
 
     // JDK/Maven: resolve once via tool step (avoids repeating "Tool Installation" every stage).
