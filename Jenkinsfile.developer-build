@@ -4,7 +4,7 @@
 
 pipeline {
     agent {
-        label 'gcp-build-agent'
+        label 'yas-build-worker'
     }
 
     options {
