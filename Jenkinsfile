@@ -127,7 +127,13 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('Test') {
             when {
-                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+                // Release tag = promote-only: the tagged commit's images were already
+                // gate-checked by the main build that published them. Re-running
+                // test/scan here would re-verify source, not the promoted binaries.
+                expression {
+                    env.CHANGED_MODULES != '__skip_full_ci__' &&
+                    !(env.TAG_NAME != null && env.TAG_NAME ==~ /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$/)
+                }
             }
             steps {
                 script {
@@ -177,7 +183,13 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('Coverage Gate') {
             when {
-                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+                // Release tag = promote-only: the tagged commit's images were already
+                // gate-checked by the main build that published them. Re-running
+                // test/scan here would re-verify source, not the promoted binaries.
+                expression {
+                    env.CHANGED_MODULES != '__skip_full_ci__' &&
+                    !(env.TAG_NAME != null && env.TAG_NAME ==~ /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$/)
+                }
             }
             steps {
                 script {
@@ -201,7 +213,13 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('Build') {
             when {
-                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+                // Release tag = promote-only: the tagged commit's images were already
+                // gate-checked by the main build that published them. Re-running
+                // test/scan here would re-verify source, not the promoted binaries.
+                expression {
+                    env.CHANGED_MODULES != '__skip_full_ci__' &&
+                    !(env.TAG_NAME != null && env.TAG_NAME ==~ /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$/)
+                }
             }
             steps {
                 script {
@@ -219,7 +237,13 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('SonarQube – Analysis') {
             when {
-                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+                // Release tag = promote-only: the tagged commit's images were already
+                // gate-checked by the main build that published them. Re-running
+                // test/scan here would re-verify source, not the promoted binaries.
+                expression {
+                    env.CHANGED_MODULES != '__skip_full_ci__' &&
+                    !(env.TAG_NAME != null && env.TAG_NAME ==~ /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$/)
+                }
             }
             steps {
                 script {
@@ -254,7 +278,13 @@ pipeline {
         // ══════════════════════════════════════════════════════
         stage('SonarQube – Quality Gate') {
             when {
-                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
+                // Release tag = promote-only: the tagged commit's images were already
+                // gate-checked by the main build that published them. Re-running
+                // test/scan here would re-verify source, not the promoted binaries.
+                expression {
+                    env.CHANGED_MODULES != '__skip_full_ci__' &&
+                    !(env.TAG_NAME != null && env.TAG_NAME ==~ /^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$/)
+                }
             }
             steps {
                 script {
@@ -417,6 +447,10 @@ BASH
                                 credentialsId: "${env.DOCKERHUB_CREDENTIALS_ID}",
                                 usernameVariable: 'DOCKERHUB_USERNAME',
                                 passwordVariable: 'DOCKERHUB_TOKEN'
+                            ),
+                            sshUserPrivateKey(
+                                credentialsId: "${env.GITOPS_CREDENTIALS_ID}",
+                                keyFileVariable: 'GITOPS_SSH_KEY'
                             )
                         ]) {
                             sh '''bash <<'BASH'
@@ -463,6 +497,17 @@ BASH
 
                                 echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
+                                # Release promote: dev overlay is the source of truth for what each
+                                # service currently runs. Incremental CI means dev holds mixed tags,
+                                # so one commit SHA is not guaranteed to exist for every image.
+                                dev_overlay="yas-cd-release-src/overlays/dev/kustomization.yaml"
+                                if is_release_tag; then
+                                    command -v yq >/dev/null 2>&1
+                                    export GIT_SSH_COMMAND="ssh -i ${GITOPS_SSH_KEY} -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+                                    rm -rf yas-cd-release-src
+                                    git clone --depth 1 --branch "$GITOPS_BRANCH" "$GITOPS_REPO" yas-cd-release-src
+                                fi
+
                                 while IFS= read -r service_name; do
                                     [ -n "$service_name" ] || continue
 
@@ -472,11 +517,19 @@ BASH
                                     image_ref="docker.io/${DOCKERHUB_USERNAME}/${image_name}"
 
                                     if is_release_tag; then
-                                        echo "Release tag ${TAG_NAME}: promoting existing ${image_ref}:${commit_tag} to ${image_ref}:${TAG_NAME}"
-                                        docker buildx imagetools inspect "${image_ref}:${commit_tag}" >/dev/null
+                                        source_tag="$(IMAGE_NAME="$image_name" yq -r '.images[] | select(.name | split("/")[-1] == env(IMAGE_NAME)) | .newTag' "$dev_overlay" | head -n 1)"
+                                        if [ -z "$source_tag" ] || [ "$source_tag" = "null" ]; then
+                                            echo "Release tag ${TAG_NAME}: no dev overlay tag found for ${image_name}; cannot promote." >&2
+                                            exit 1
+                                        fi
+                                        if [ "$source_tag" != "$commit_tag" ]; then
+                                            echo "Release tag ${TAG_NAME}: dev overlay pins ${image_name}:${source_tag} (differs from tagged commit ${commit_tag}); promoting the dev-declared tag."
+                                        fi
+                                        echo "Release tag ${TAG_NAME}: promoting existing ${image_ref}:${source_tag} to ${image_ref}:${TAG_NAME}"
+                                        docker buildx imagetools inspect "${image_ref}:${source_tag}" >/dev/null
                                         docker buildx imagetools create \
                                             -t "${image_ref}:${TAG_NAME}" \
-                                            "${image_ref}:${commit_tag}"
+                                            "${image_ref}:${source_tag}"
                                         continue
                                     fi
 
