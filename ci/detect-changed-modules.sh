@@ -4,7 +4,9 @@ set -euo pipefail
 # Keep this list aligned with root pom.xml modules section.
 modules=(
   "common-library"
+  "backoffice"
   "backoffice-bff"
+  "storefront"
   "cart"
   "customer"
   "inventory"
