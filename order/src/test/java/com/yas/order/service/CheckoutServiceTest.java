@@ -111,7 +111,7 @@ class CheckoutServiceTest {
                 1,
                 true);
         productCheckoutListVmMap = productCheckoutListVms.stream()
-                .collect(Collectors.toMap(ProductCheckoutListVm::getId, Function.identity()));
+                .collect(Collectors.toMap(ProductCheckoutListVm::id, Function.identity()));
     }
 
     @Test
