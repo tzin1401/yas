@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Non-Maven UI service paths (Next.js): detected separately, not via mvn -pl.
+ui_modules=(
+  "backoffice"
+  "storefront"
+)
+
 # Keep this list aligned with root pom.xml modules section.
 modules=(
   "common-library"
-  "backoffice"
   "backoffice-bff"
-  "storefront"
   "cart"
   "customer"
   "inventory"
@@ -153,6 +157,14 @@ while [[ ${added} -eq 1 ]]; do
       fi
     done
   done <<< "${service_dependencies}"
+done
+
+# Detect non-Maven UI modules (backoffice/, storefront/) separately.
+# These are Docker-only builds; Maven stages skip them via pom.xml reactor.
+for ui in "${ui_modules[@]}"; do
+  if grep -Eq "^${ui}/" <<< "${changed_files}"; then
+    selected_modules+=("${ui}")
+  fi
 done
 
 printf '%s\n' "${selected_modules[@]}" | paste -sd ','

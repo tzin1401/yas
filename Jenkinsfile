@@ -139,6 +139,11 @@ pipeline {
                 script {
                     def modules = env.CHANGED_MODULES.split(',')
                     for (module in modules) {
+                        // Skip non-Maven UI modules (Next.js: backoffice, storefront)
+                        if (!fileExists("${module}/pom.xml")) {
+                            echo "Skipping Maven test for non-Maven module: ${module}"
+                            continue
+                        }
                         sh "mvn -B -ntp -pl ${module} -am test jacoco:report -DskipITs"
                     }
                 }
@@ -225,6 +230,11 @@ pipeline {
                 script {
                     def modules = env.CHANGED_MODULES.split(',')
                     for (module in modules) {
+                        // Skip non-Maven UI modules (Next.js: backoffice, storefront)
+                        if (!fileExists("${module}/pom.xml")) {
+                            echo "Skipping Maven build for non-Maven module: ${module}"
+                            continue
+                        }
                         sh "mvn -B -ntp -DskipTests -pl ${module} -am package"
                     }
                 }
