@@ -89,11 +89,6 @@ for module in "${modules[@]}"; do
   fi
 done
 
-if [[ ${#selected_modules[@]} -eq 0 ]]; then
-  # Non-module change (e.g. docs): keep CI green but cheap by running one core module.
-  selected_modules=("common-library")
-fi
-
 is_selected() {
   local candidate="$1"
   local selected
@@ -166,5 +161,10 @@ for ui in "${ui_modules[@]}"; do
     selected_modules+=("${ui}")
   fi
 done
+
+if [[ ${#selected_modules[@]} -eq 0 ]]; then
+  # Non-module change (e.g. root CI-adjacent file): keep CI green but cheap by running one core module.
+  selected_modules=("common-library")
+fi
 
 printf '%s\n' "${selected_modules[@]}" | paste -sd ','
