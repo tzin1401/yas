@@ -37,9 +37,10 @@ const sendRequest = async (
     const response = await fetch(endpoint, fetchOptions);
 
     // Type 'opaqueredirect' means the server returned a redirect to a cross-origin URL.
-    // Navigate the browser there instead of letting fetch follow it (which causes CORS error).
+    // Navigate through the BFF login entrypoint instead of the API endpoint.
+    // Otherwise Spring Security saves the API URL and returns the browser to JSON after login.
     if (response.type === 'opaqueredirect') {
-      window.location.href = endpoint;
+      window.location.href = '/oauth2/authorization/api-client';
       return response;
     }
 
