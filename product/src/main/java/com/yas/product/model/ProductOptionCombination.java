@@ -35,6 +35,7 @@ public class ProductOptionCombination {
 
     private int displayOrder;
 
+    @jakarta.persistence.Column(name = "\"value\"")
     private String value;
 
     @Override

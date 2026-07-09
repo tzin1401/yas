@@ -28,5 +28,6 @@ public class ProductAttributeValue {
     @JoinColumn(name = "product_attribute_id", nullable = false)
     private ProductAttribute productAttribute;
 
+    @jakarta.persistence.Column(name = "\"value\"")
     private String value;
 }
