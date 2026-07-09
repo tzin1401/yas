@@ -18,6 +18,8 @@ modules=(
   "rating"
   "search"
   "storefront-bff"
+  "storefront"
+  "backoffice"
   "tax"
   "webhook"
   "sampledata"

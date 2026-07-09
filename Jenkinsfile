@@ -139,7 +139,11 @@ pipeline {
                 script {
                     def modules = env.CHANGED_MODULES.split(',')
                     for (module in modules) {
-                        sh "mvn -B -ntp -pl ${module} -am test jacoco:report -DskipITs"
+                        if (fileExists("${module}/pom.xml")) {
+                            sh "mvn -B -ntp -pl ${module} -am test jacoco:report -DskipITs"
+                        } else {
+                            echo "Skipping Maven test for non-maven module: ${module}"
+                        }
                     }
                 }
             }
@@ -200,7 +204,9 @@ pipeline {
                         echo "Coverage gate: skip"
                     } else {
                         for (module in serviceModules) {
-                            sh "ci/check-coverage.sh ${module} ${env.COVERAGE_THRESHOLD}"
+                            if (fileExists("${module}/pom.xml")) {
+                                sh "ci/check-coverage.sh ${module} ${env.COVERAGE_THRESHOLD}"
+                            }
                         }
                     }
                 }
@@ -225,7 +231,11 @@ pipeline {
                 script {
                     def modules = env.CHANGED_MODULES.split(',')
                     for (module in modules) {
-                        sh "mvn -B -ntp -DskipTests -pl ${module} -am package"
+                        if (fileExists("${module}/pom.xml")) {
+                            sh "mvn -B -ntp -DskipTests -pl ${module} -am package"
+                        } else {
+                            echo "Skipping Maven build for non-maven module: ${module}"
+                        }
                     }
                 }
             }
@@ -248,7 +258,7 @@ pipeline {
             steps {
                 script {
                     def modules = env.CHANGED_MODULES.split(',')
-                    def serviceModules = modules.findAll { it != 'common-library' }
+                    def serviceModules = modules.findAll { it != 'common-library' && fileExists("${it}/pom.xml") }
 
                     if (serviceModules.isEmpty()) {
                         echo "SonarQube: skip"
@@ -289,7 +299,7 @@ pipeline {
             steps {
                 script {
                     def modules = env.CHANGED_MODULES.split(',')
-                    def serviceModules = modules.findAll { it != 'common-library' }
+                    def serviceModules = modules.findAll { it != 'common-library' && fileExists("${it}/pom.xml") }
 
                     if (serviceModules.isEmpty()) {
                         echo "SonarQube Quality Gate: skip"
