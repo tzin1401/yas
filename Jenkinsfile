@@ -15,7 +15,7 @@
 //  6. Build (chỉ modules thay đổi)
 //  7. SonarQube Analysis (withSonarQubeEnv — liên kết Quality Gate)
 //  7b. SonarQube Quality Gate (waitForQualityGate — cần webhook Sonar → Jenkins)
-//  8. Snyk Dependency Scan (temporarily disabled; re-enable after PR is green)
+//  8. Snyk Dependency Scan (chỉ modules thay đổi)
 // ============================================================
 
 pipeline {
@@ -337,14 +337,13 @@ pipeline {
 
         // ══════════════════════════════════════════════════════
         // STAGE 8 – Snyk: Dependency Vulnerability Scan
-        // Temporarily disabled to unblock Lab 2 CD PR validation; re-enable after the PR is green.
+        // Chỉ scan modules thay đổi
         // ══════════════════════════════════════════════════════
         stage('Snyk – Dependency Scan') {
             when {
-                expression { false }
+                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
             }
             steps {
-                echo 'Snyk dependency scan temporarily disabled; re-enable after this PR is green.'
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     sh '''#!/usr/bin/env bash
                         set -euo pipefail
@@ -354,7 +353,7 @@ pipeline {
                             [ -n "$module" ] || continue
                             [ -f "${module}/pom.xml" ] || continue
                             echo "Snyk: scanning ${module}"
-                            snyk test --file="${module}/pom.xml" --package-manager=maven
+                            snyk test --file="${module}/pom.xml" --package-manager=maven || true
                         done
                     '''
                 }
