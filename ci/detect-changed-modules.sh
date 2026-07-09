@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Non-Maven UI service paths (Next.js): detected separately, not via mvn -pl.
+ui_modules=(
+  "backoffice"
+  "storefront"
+)
+
 # Keep this list aligned with root pom.xml modules section.
 modules=(
   "common-library"
@@ -85,11 +91,6 @@ for module in "${modules[@]}"; do
   fi
 done
 
-if [[ ${#selected_modules[@]} -eq 0 ]]; then
-  # Non-module change (e.g. docs): keep CI green but cheap by running one core module.
-  selected_modules=("common-library")
-fi
-
 is_selected() {
   local candidate="$1"
   local selected
@@ -154,5 +155,18 @@ while [[ ${added} -eq 1 ]]; do
     done
   done <<< "${service_dependencies}"
 done
+
+# Detect non-Maven UI modules (backoffice/, storefront/) separately.
+# These are Docker-only builds; Maven stages skip them via pom.xml reactor.
+for ui in "${ui_modules[@]}"; do
+  if grep -Eq "^${ui}/" <<< "${changed_files}"; then
+    selected_modules+=("${ui}")
+  fi
+done
+
+if [[ ${#selected_modules[@]} -eq 0 ]]; then
+  # Non-module change (e.g. root CI-adjacent file): keep CI green but cheap by running one core module.
+  selected_modules=("common-library")
+fi
 
 printf '%s\n' "${selected_modules[@]}" | paste -sd ','

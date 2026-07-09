@@ -137,13 +137,15 @@ pipeline {
             }
             steps {
                 script {
-                    def modules = env.CHANGED_MODULES.split(',')
-                    for (module in modules) {
-                        if (fileExists("${module}/pom.xml")) {
-                            sh "mvn -B -ntp -pl ${module} -am test jacoco:report -DskipITs"
-                        } else {
-                            echo "Skipping Maven test for non-maven module: ${module}"
+                    def modules = env.CHANGED_MODULES.tokenize(',')
+                    for (int i = 0; i < modules.size(); i++) {
+                        def module = modules[i]
+                        // Skip non-Maven UI modules (Next.js: backoffice, storefront)
+                        if (!fileExists("${module}/pom.xml")) {
+                            echo "Skipping Maven test for non-Maven module: ${module}"
+                            continue
                         }
+                        sh "mvn -B -ntp -pl ${module} -am test jacoco:report -DskipITs"
                     }
                 }
             }
@@ -197,16 +199,21 @@ pipeline {
             }
             steps {
                 script {
-                    def modules = env.CHANGED_MODULES.split(',')
-                    def serviceModules = modules.findAll { it != 'common-library' }
+                    def modules = env.CHANGED_MODULES.tokenize(',')
+                    def mavenModules = []
+                    for (int i = 0; i < modules.size(); i++) {
+                        def module = modules[i]
+                        if (module != 'common-library' && fileExists("${module}/pom.xml")) {
+                            mavenModules.add(module)
+                        }
+                    }
 
-                    if (serviceModules.isEmpty()) {
+                    if (mavenModules.isEmpty()) {
                         echo "Coverage gate: skip"
                     } else {
-                        for (module in serviceModules) {
-                            if (fileExists("${module}/pom.xml")) {
-                                sh "ci/check-coverage.sh ${module} ${env.COVERAGE_THRESHOLD}"
-                            }
+                        for (int i = 0; i < mavenModules.size(); i++) {
+                            def module = mavenModules[i]
+                            sh "ci/check-coverage.sh ${module} ${env.COVERAGE_THRESHOLD}"
                         }
                     }
                 }
@@ -229,13 +236,15 @@ pipeline {
             }
             steps {
                 script {
-                    def modules = env.CHANGED_MODULES.split(',')
-                    for (module in modules) {
-                        if (fileExists("${module}/pom.xml")) {
-                            sh "mvn -B -ntp -DskipTests -pl ${module} -am package"
-                        } else {
-                            echo "Skipping Maven build for non-maven module: ${module}"
+                    def modules = env.CHANGED_MODULES.tokenize(',')
+                    for (int i = 0; i < modules.size(); i++) {
+                        def module = modules[i]
+                        // Skip non-Maven UI modules (Next.js: backoffice, storefront)
+                        if (!fileExists("${module}/pom.xml")) {
+                            echo "Skipping Maven build for non-Maven module: ${module}"
+                            continue
                         }
+                        sh "mvn -B -ntp -DskipTests -pl ${module} -am package"
                     }
                 }
             }
@@ -257,18 +266,19 @@ pipeline {
             }
             steps {
                 script {
-                    def modules = env.CHANGED_MODULES.split(',')
-                    def serviceModules = []
-                    for (int i = 0; i < modules.length; i++) {
-                        if (modules[i] != 'common-library' && fileExists("${modules[i]}/pom.xml")) {
-                            serviceModules.add(modules[i])
+                    def modules = env.CHANGED_MODULES.tokenize(',')
+                    def mavenModules = []
+                    for (int i = 0; i < modules.size(); i++) {
+                        def module = modules[i]
+                        if (module != 'common-library' && fileExists("${module}/pom.xml")) {
+                            mavenModules.add(module)
                         }
                     }
 
-                    if (serviceModules.isEmpty()) {
+                    if (mavenModules.isEmpty()) {
                         echo "SonarQube: skip"
                     } else {
-                        def plArg = serviceModules.join(',')
+                        def plArg = mavenModules.join(',')
                         echo "SonarQube: ${plArg}"
                         withSonarQubeEnv("${env.SONARQUBE_INSTALLATION}") {
                             withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
@@ -303,15 +313,16 @@ pipeline {
             }
             steps {
                 script {
-                    def modules = env.CHANGED_MODULES.split(',')
-                    def serviceModules = []
-                    for (int i = 0; i < modules.length; i++) {
-                        if (modules[i] != 'common-library' && fileExists("${modules[i]}/pom.xml")) {
-                            serviceModules.add(modules[i])
+                    def modules = env.CHANGED_MODULES.tokenize(',')
+                    def mavenModules = []
+                    for (int i = 0; i < modules.size(); i++) {
+                        def module = modules[i]
+                        if (module != 'common-library' && fileExists("${module}/pom.xml")) {
+                            mavenModules.add(module)
                         }
                     }
 
-                    if (serviceModules.isEmpty()) {
+                    if (mavenModules.isEmpty()) {
                         echo "SonarQube Quality Gate: skip"
                     } else {
                         withSonarQubeEnv("${env.SONARQUBE_INSTALLATION}") {
