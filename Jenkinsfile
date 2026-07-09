@@ -258,7 +258,12 @@ pipeline {
             steps {
                 script {
                     def modules = env.CHANGED_MODULES.split(',')
-                    def serviceModules = modules.findAll { it != 'common-library' && fileExists("${it}/pom.xml") }
+                    def serviceModules = []
+                    for (int i = 0; i < modules.length; i++) {
+                        if (modules[i] != 'common-library' && fileExists("${modules[i]}/pom.xml")) {
+                            serviceModules.add(modules[i])
+                        }
+                    }
 
                     if (serviceModules.isEmpty()) {
                         echo "SonarQube: skip"
@@ -299,7 +304,12 @@ pipeline {
             steps {
                 script {
                     def modules = env.CHANGED_MODULES.split(',')
-                    def serviceModules = modules.findAll { it != 'common-library' && fileExists("${it}/pom.xml") }
+                    def serviceModules = []
+                    for (int i = 0; i < modules.length; i++) {
+                        if (modules[i] != 'common-library' && fileExists("${modules[i]}/pom.xml")) {
+                            serviceModules.add(modules[i])
+                        }
+                    }
 
                     if (serviceModules.isEmpty()) {
                         echo "SonarQube Quality Gate: skip"
