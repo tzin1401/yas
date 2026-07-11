@@ -366,12 +366,23 @@ pipeline {
                         sed -i "s/\\${revision}/${REVISION}/g" \
                             "${HOME}/.m2/repository/com/yas/common-library/${REVISION}/common-library-${REVISION}.pom"
 
+                        # `snyk test` only prints to this build's console log -- it never
+                        # persists anything to the Snyk web dashboard. `snyk monitor` uploads
+                        # a snapshot per CI run instead, so results stay browsable after
+                        # Jenkins prunes old build logs (buildDiscarder keeps only 10 builds).
+                        # Project names get a "-ci-<branch/tag>" suffix so these CI-triggered
+                        # snapshots don't collide with the "yas-<module>" projects already
+                        # auto-imported by the separate Snyk GitHub integration.
+                        ci_identifier="${BRANCH_NAME:-${TAG_NAME:-unknown}}"
+
                         IFS=',' read -r -a modules <<< "${CHANGED_MODULES}"
                         for module in "${modules[@]}"; do
                             [ -n "$module" ] || continue
                             [ -f "${module}/pom.xml" ] || continue
                             echo "Snyk: scanning ${module}"
                             snyk test --file="${module}/pom.xml" --package-manager=maven || true
+                            snyk monitor --file="${module}/pom.xml" --package-manager=maven \
+                                --project-name="yas-${module}-ci-${ci_identifier}" || true
                         done
                     '''
                 }
