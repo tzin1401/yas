@@ -348,6 +348,24 @@ pipeline {
                     sh '''#!/usr/bin/env bash
                         set -euo pipefail
 
+                        # Snyk resolves each module's pom.xml on its own, outside the Maven
+                        # reactor, so it can't substitute the ${revision} CI-friendly-version
+                        # placeholder used in every module's <parent><version>. Installing the
+                        # root POM alone isn't enough: modules also depend on common-library,
+                        # and plain `mvn install` copies the raw pom.xml into ~/.m2 without
+                        # flattening ${revision} either, so common-library's installed parent
+                        # reference is still the literal placeholder. Install both, then patch
+                        # the two installed POM copies in place so every downstream lookup
+                        # (root and common-library) resolves to a real version instead of
+                        # failing with SNYK-OS-MAVEN-0018 ("Cannot build Maven dependency tree").
+                        REVISION="$(sed -n 's/.*<revision>\\(.*\\)<\\/revision>.*/\\1/p' pom.xml | head -1)"
+                        mvn -N install -DskipTests -q
+                        mvn -pl common-library install -DskipTests -q
+                        sed -i "s/\\${revision}/${REVISION}/g" \
+                            "${HOME}/.m2/repository/com/yas/yas/${REVISION}/yas-${REVISION}.pom"
+                        sed -i "s/\\${revision}/${REVISION}/g" \
+                            "${HOME}/.m2/repository/com/yas/common-library/${REVISION}/common-library-${REVISION}.pom"
+
                         IFS=',' read -r -a modules <<< "${CHANGED_MODULES}"
                         for module in "${modules[@]}"; do
                             [ -n "$module" ] || continue
