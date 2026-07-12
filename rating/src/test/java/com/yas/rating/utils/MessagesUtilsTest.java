@@ -12,4 +12,14 @@ class MessagesUtilsTest {
         String message = MessagesUtils.getMessage(code);
         assertEquals(code, message);
     }
+
+    @Test
+    void getMessage_whenKeyExists_thenFormatsArguments() {
+        assertEquals("RATING 7 is not found", MessagesUtils.getMessage("RATING_NOT_FOUND", 7));
+    }
+
+    @Test
+    void getMessage_whenKeyDoesNotExist_thenReturnsCode() {
+        assertEquals("UNKNOWN_CODE", MessagesUtils.getMessage("UNKNOWN_CODE"));
+    }
 }
