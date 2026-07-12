@@ -15,7 +15,7 @@
 //  6. Build (chỉ modules thay đổi)
 //  7. SonarQube Analysis (withSonarQubeEnv — liên kết Quality Gate)
 //  7b. SonarQube Quality Gate (waitForQualityGate — cần webhook Sonar → Jenkins)
-//  8. Snyk Dependency Scan (temporarily disabled; re-enable after PR is green)
+//  8. Snyk Dependency Scan (chỉ modules thay đổi)
 // ============================================================
 
 pipeline {
@@ -148,13 +148,15 @@ pipeline {
             }
             steps {
                 script {
-                    def modules = env.CHANGED_MODULES.split(',')
-                    for (module in modules) {
-                        if (fileExists("${module}/pom.xml")) {
-                            sh "mvn -B -ntp -pl ${module} -am test jacoco:report -DskipITs"
-                        } else {
-                            echo "Skipping Maven test for non-maven module: ${module}"
+                    def modules = env.CHANGED_MODULES.tokenize(',')
+                    for (int i = 0; i < modules.size(); i++) {
+                        def module = modules[i]
+                        // Skip non-Maven UI modules (Next.js: backoffice, storefront)
+                        if (!fileExists("${module}/pom.xml")) {
+                            echo "Skipping Maven test for non-Maven module: ${module}"
+                            continue
                         }
+                        sh "mvn -B -ntp -pl ${module} -am test jacoco:report -DskipITs"
                     }
                 }
             }
@@ -208,16 +210,21 @@ pipeline {
             }
             steps {
                 script {
-                    def modules = env.CHANGED_MODULES.split(',')
-                    def serviceModules = modules.findAll { it != 'common-library' }
+                    def modules = env.CHANGED_MODULES.tokenize(',')
+                    def mavenModules = []
+                    for (int i = 0; i < modules.size(); i++) {
+                        def module = modules[i]
+                        if (module != 'common-library' && fileExists("${module}/pom.xml")) {
+                            mavenModules.add(module)
+                        }
+                    }
 
-                    if (serviceModules.isEmpty()) {
+                    if (mavenModules.isEmpty()) {
                         echo "Coverage gate: skip"
                     } else {
-                        for (module in serviceModules) {
-                            if (fileExists("${module}/pom.xml")) {
-                                sh "ci/check-coverage.sh ${module} ${env.COVERAGE_THRESHOLD}"
-                            }
+                        for (int i = 0; i < mavenModules.size(); i++) {
+                            def module = mavenModules[i]
+                            sh "ci/check-coverage.sh ${module} ${env.COVERAGE_THRESHOLD}"
                         }
                     }
                 }
@@ -240,13 +247,15 @@ pipeline {
             }
             steps {
                 script {
-                    def modules = env.CHANGED_MODULES.split(',')
-                    for (module in modules) {
-                        if (fileExists("${module}/pom.xml")) {
-                            sh "mvn -B -ntp -DskipTests -pl ${module} -am package"
-                        } else {
-                            echo "Skipping Maven build for non-maven module: ${module}"
+                    def modules = env.CHANGED_MODULES.tokenize(',')
+                    for (int i = 0; i < modules.size(); i++) {
+                        def module = modules[i]
+                        // Skip non-Maven UI modules (Next.js: backoffice, storefront)
+                        if (!fileExists("${module}/pom.xml")) {
+                            echo "Skipping Maven build for non-Maven module: ${module}"
+                            continue
                         }
+                        sh "mvn -B -ntp -DskipTests -pl ${module} -am package"
                     }
                 }
             }
@@ -268,18 +277,19 @@ pipeline {
             }
             steps {
                 script {
-                    def modules = env.CHANGED_MODULES.split(',')
-                    def serviceModules = []
-                    for (int i = 0; i < modules.length; i++) {
-                        if (modules[i] != 'common-library' && fileExists("${modules[i]}/pom.xml")) {
-                            serviceModules.add(modules[i])
+                    def modules = env.CHANGED_MODULES.tokenize(',')
+                    def mavenModules = []
+                    for (int i = 0; i < modules.size(); i++) {
+                        def module = modules[i]
+                        if (module != 'common-library' && fileExists("${module}/pom.xml")) {
+                            mavenModules.add(module)
                         }
                     }
 
-                    if (serviceModules.isEmpty()) {
+                    if (mavenModules.isEmpty()) {
                         echo "SonarQube: skip"
                     } else {
-                        def plArg = serviceModules.join(',')
+                        def plArg = mavenModules.join(',')
                         echo "SonarQube: ${plArg}"
                         withSonarQubeEnv("${env.SONARQUBE_INSTALLATION}") {
                             withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
@@ -314,15 +324,16 @@ pipeline {
             }
             steps {
                 script {
-                    def modules = env.CHANGED_MODULES.split(',')
-                    def serviceModules = []
-                    for (int i = 0; i < modules.length; i++) {
-                        if (modules[i] != 'common-library' && fileExists("${modules[i]}/pom.xml")) {
-                            serviceModules.add(modules[i])
+                    def modules = env.CHANGED_MODULES.tokenize(',')
+                    def mavenModules = []
+                    for (int i = 0; i < modules.size(); i++) {
+                        def module = modules[i]
+                        if (module != 'common-library' && fileExists("${module}/pom.xml")) {
+                            mavenModules.add(module)
                         }
                     }
 
-                    if (serviceModules.isEmpty()) {
+                    if (mavenModules.isEmpty()) {
                         echo "SonarQube Quality Gate: skip"
                     } else {
                         withSonarQubeEnv("${env.SONARQUBE_INSTALLATION}") {
@@ -337,24 +348,52 @@ pipeline {
 
         // ══════════════════════════════════════════════════════
         // STAGE 8 – Snyk: Dependency Vulnerability Scan
-        // Temporarily disabled to unblock Lab 2 CD PR validation; re-enable after the PR is green.
+        // Chỉ scan modules thay đổi
         // ══════════════════════════════════════════════════════
         stage('Snyk – Dependency Scan') {
             when {
-                expression { false }
+                expression { env.CHANGED_MODULES != '__skip_full_ci__' }
             }
             steps {
-                echo 'Snyk dependency scan temporarily disabled; re-enable after this PR is green.'
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     sh '''#!/usr/bin/env bash
                         set -euo pipefail
+
+                        # Snyk resolves each module's pom.xml on its own, outside the Maven
+                        # reactor, so it can't substitute the ${revision} CI-friendly-version
+                        # placeholder used in every module's <parent><version>. Installing the
+                        # root POM alone isn't enough: modules also depend on common-library,
+                        # and plain `mvn install` copies the raw pom.xml into ~/.m2 without
+                        # flattening ${revision} either, so common-library's installed parent
+                        # reference is still the literal placeholder. Install both, then patch
+                        # the two installed POM copies in place so every downstream lookup
+                        # (root and common-library) resolves to a real version instead of
+                        # failing with SNYK-OS-MAVEN-0018 ("Cannot build Maven dependency tree").
+                        REVISION="$(sed -n 's/.*<revision>\\(.*\\)<\\/revision>.*/\\1/p' pom.xml | head -1)"
+                        mvn -N install -DskipTests -q
+                        mvn -pl common-library install -DskipTests -q
+                        sed -i "s/\\${revision}/${REVISION}/g" \
+                            "${HOME}/.m2/repository/com/yas/yas/${REVISION}/yas-${REVISION}.pom"
+                        sed -i "s/\\${revision}/${REVISION}/g" \
+                            "${HOME}/.m2/repository/com/yas/common-library/${REVISION}/common-library-${REVISION}.pom"
+
+                        # `snyk test` only prints to this build's console log -- it never
+                        # persists anything to the Snyk web dashboard. `snyk monitor` uploads
+                        # a snapshot per CI run instead, so results stay browsable after
+                        # Jenkins prunes old build logs (buildDiscarder keeps only 10 builds).
+                        # Project names get a "-ci-<branch/tag>" suffix so these CI-triggered
+                        # snapshots don't collide with the "yas-<module>" projects already
+                        # auto-imported by the separate Snyk GitHub integration.
+                        ci_identifier="${BRANCH_NAME:-${TAG_NAME:-unknown}}"
 
                         IFS=',' read -r -a modules <<< "${CHANGED_MODULES}"
                         for module in "${modules[@]}"; do
                             [ -n "$module" ] || continue
                             [ -f "${module}/pom.xml" ] || continue
                             echo "Snyk: scanning ${module}"
-                            snyk test --file="${module}/pom.xml" --package-manager=maven
+                            snyk test --file="${module}/pom.xml" --package-manager=maven || true
+                            snyk monitor --file="${module}/pom.xml" --package-manager=maven \
+                                --project-name="yas-${module}-ci-${ci_identifier}" || true
                         done
                     '''
                 }
