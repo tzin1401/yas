@@ -98,7 +98,11 @@ pipeline {
                 sh '''
                     set -euo pipefail
                     echo "Docs/GitOps/spec-only change detected; skipping full Maven CI."
-                    find deploy/gitops docs specs .agents .specify -type f \\( -name '*.yaml' -o -name '*.yml' -o -name '*.md' \\) -print >/tmp/lab2-non-code-files.txt
+                    dirs=""
+                    for d in deploy/gitops docs specs .agents .specify; do
+                        [ -d "$d" ] && dirs="$dirs $d"
+                    done
+                    find $dirs -type f \\( -name '*.yaml' -o -name '*.yml' -o -name '*.md' \\) -print >/tmp/lab2-non-code-files.txt
                     test -s /tmp/lab2-non-code-files.txt
                 '''
             }
@@ -118,6 +122,13 @@ pipeline {
                     fi
                     echo "Gitleaks: OK"
                 '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'gitleaks-report.json',
+                                     allowEmptyArchive: true,
+                                     fingerprint: true
+                }
             }
         }
 
