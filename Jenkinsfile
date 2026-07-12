@@ -123,6 +123,13 @@ pipeline {
                     echo "Gitleaks: OK"
                 '''
             }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'gitleaks-report.json',
+                                     allowEmptyArchive: true,
+                                     fingerprint: true
+                }
+            }
         }
 
         // ══════════════════════════════════════════════════════
