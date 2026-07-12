@@ -1,12 +1,19 @@
 package com.yas.webhook.utils;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
 
 class HmacUtilsTest {
+
+    @Test
+    void hash_shouldReturnNotNull() throws Exception {
+        String hash = HmacUtils.hash("data", "key");
+        assertNotNull(hash);
+    }
 
     @Test
     void hashShouldReturnDeterministicHmacBytes() throws Exception {
