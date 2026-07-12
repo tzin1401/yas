@@ -2,13 +2,12 @@ package com.yas.rating.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.yas.rating.config.ServiceUrlConfig;
-import com.yas.rating.viewmodel.OrderExistsByProductAndUserGetVm;
+import com.yas.rating.viewmodel.CustomerVm;
 import java.net.URI;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,7 +26,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.web.client.RestClient;
 
 @ExtendWith(MockitoExtension.class)
-class OrderServiceTest {
+class CustomerServiceTest {
 
     @Mock
     private RestClient restClient;
@@ -36,14 +35,14 @@ class OrderServiceTest {
     private ServiceUrlConfig serviceUrlConfig;
 
     @InjectMocks
-    private OrderService orderService;
+    private CustomerService customerService;
 
     @Mock
     private RestClient.ResponseSpec responseSpec;
 
     @BeforeEach
     void setUp() {
-        Mockito.lenient().when(serviceUrlConfig.order()).thenReturn("http://api.yas.local/order");
+        Mockito.lenient().when(serviceUrlConfig.customer()).thenReturn("http://api.yas.local/customer");
     }
 
     @AfterEach
@@ -52,13 +51,14 @@ class OrderServiceTest {
     }
 
     @Test
-    void checkOrderExistsByProductAndUserWithStatus_shouldReturnVm() {
+    void getCustomer_shouldReturnCustomerVm() {
         Jwt jwt = mock(Jwt.class);
-        when(jwt.getTokenValue()).thenReturn("token");
+        when(jwt.getTokenValue()).thenReturn("mock-token");
         JwtAuthenticationToken auth = new JwtAuthenticationToken(jwt);
-        SecurityContext context = mock(SecurityContext.class);
-        when(context.getAuthentication()).thenReturn(auth);
-        SecurityContextHolder.setContext(context);
+        
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
 
         RestClient.RequestHeadersUriSpec requestHeadersUriSpec = mock(RestClient.RequestHeadersUriSpec.class);
         when(restClient.get()).thenReturn(requestHeadersUriSpec);
@@ -66,19 +66,18 @@ class OrderServiceTest {
         when(requestHeadersUriSpec.headers(any())).thenReturn(requestHeadersUriSpec);
         when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
 
-        OrderExistsByProductAndUserGetVm expected = new OrderExistsByProductAndUserGetVm(true);
-        when(responseSpec.body(OrderExistsByProductAndUserGetVm.class)).thenReturn(expected);
+        CustomerVm expected = new CustomerVm("user", "email", "first", "last");
+        when(responseSpec.body(CustomerVm.class)).thenReturn(expected);
 
-        OrderExistsByProductAndUserGetVm result = orderService.checkOrderExistsByProductAndUserWithStatus(1L);
+        CustomerVm result = customerService.getCustomer();
 
         assertNotNull(result);
-        assertTrue(result.isPresent());
+        assertEquals("user", result.username());
     }
 
     @Test
-    void handleFallback_shouldReturnFalseVm() throws Throwable {
-        OrderExistsByProductAndUserGetVm result = orderService.handleFallback(new RuntimeException());
-        assertNotNull(result);
-        assertEquals(false, result.isPresent());
+    void handleFallback_shouldReturnNull() throws Throwable {
+        CustomerVm result = customerService.handleFallback(new RuntimeException());
+        assertEquals(null, result);
     }
 }
