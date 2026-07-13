@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.yas.location.service.CountryService;
 import com.yas.location.utils.Constants;
+import com.yas.location.viewmodel.country.CountryVm;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,10 +28,19 @@ class CountryStorefrontControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    void testListCountries_thenReturnOk() throws Exception {
+    void listCountries_returnsOk() throws Exception {
         given(countryService.findAllCountries()).willReturn(List.of());
 
-        this.mockMvc.perform(get(Constants.ApiConstant.COUNTRIES_STOREFRONT_URL))
+        mockMvc.perform(get(Constants.ApiConstant.COUNTRIES_STOREFRONT_URL))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void listCountries_whenServiceReturnsData_returnsOk() throws Exception {
+        given(countryService.findAllCountries()).willReturn(
+            List.of(new CountryVm(1L, "US", "United States", "USA", true, true, true, true, true)));
+
+        mockMvc.perform(get(Constants.ApiConstant.COUNTRIES_STOREFRONT_URL))
             .andExpect(status().isOk());
     }
 }

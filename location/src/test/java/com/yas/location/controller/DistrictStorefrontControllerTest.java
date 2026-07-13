@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.yas.location.service.DistrictService;
+import com.yas.location.viewmodel.district.DistrictGetVm;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,18 +27,18 @@ class DistrictStorefrontControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    void testGetListStorefront_thenReturnOk() throws Exception {
-        given(districtService.getList(1L)).willReturn(List.of());
+    void getList_storefrontPath_returnsOk() throws Exception {
+        given(districtService.getList(10L)).willReturn(List.of(new DistrictGetVm(1L, "D1")));
 
-        this.mockMvc.perform(get("/storefront/district/1"))
+        mockMvc.perform(get("/storefront/district/10"))
             .andExpect(status().isOk());
     }
 
     @Test
-    void testGetListBackoffice_thenReturnOk() throws Exception {
-        given(districtService.getList(1L)).willReturn(List.of());
+    void getList_backofficePath_returnsOk() throws Exception {
+        given(districtService.getList(10L)).willReturn(List.of());
 
-        this.mockMvc.perform(get("/backoffice/district/1"))
+        mockMvc.perform(get("/backoffice/district/10"))
             .andExpect(status().isOk());
     }
 }

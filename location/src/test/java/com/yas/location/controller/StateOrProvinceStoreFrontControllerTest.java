@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.yas.location.service.StateOrProvinceService;
 import com.yas.location.utils.Constants;
+import com.yas.location.viewmodel.stateorprovince.StateOrProvinceVm;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,10 +28,19 @@ class StateOrProvinceStoreFrontControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    void testGetStateOrProvince_thenReturnOk() throws Exception {
-        given(stateOrProvinceService.getAllByCountryId(1L)).willReturn(List.of());
+    void getStateOrProvince_returnsOk() throws Exception {
+        given(stateOrProvinceService.getAllByCountryId(5L)).willReturn(List.of());
 
-        this.mockMvc.perform(get(Constants.ApiConstant.STATE_OR_PROVINCES_STOREFRONT_URL + "/1"))
+        mockMvc.perform(get(Constants.ApiConstant.STATE_OR_PROVINCES_STOREFRONT_URL + "/5"))
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void getStateOrProvince_whenServiceReturnsData_returnsOk() throws Exception {
+        given(stateOrProvinceService.getAllByCountryId(5L)).willReturn(
+            List.of(new StateOrProvinceVm(1L, "California", "CA", "state", 5L)));
+
+        mockMvc.perform(get(Constants.ApiConstant.STATE_OR_PROVINCES_STOREFRONT_URL + "/5"))
             .andExpect(status().isOk());
     }
 }

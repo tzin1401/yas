@@ -98,7 +98,11 @@ pipeline {
                 sh '''
                     set -euo pipefail
                     echo "Docs/GitOps/spec-only change detected; skipping full Maven CI."
-                    find deploy/gitops docs specs .agents .specify -type f \\( -name '*.yaml' -o -name '*.yml' -o -name '*.md' \\) -print >/tmp/lab2-non-code-files.txt
+                    dirs=""
+                    for d in deploy/gitops docs specs .agents .specify; do
+                        [ -d "$d" ] && dirs="$dirs $d"
+                    done
+                    find $dirs -type f \\( -name '*.yaml' -o -name '*.yml' -o -name '*.md' \\) -print >/tmp/lab2-non-code-files.txt
                     test -s /tmp/lab2-non-code-files.txt
                 '''
             }
@@ -118,6 +122,13 @@ pipeline {
                     fi
                     echo "Gitleaks: OK"
                 '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'gitleaks-report.json',
+                                     allowEmptyArchive: true,
+                                     fingerprint: true
+                }
             }
         }
 
@@ -348,12 +359,41 @@ pipeline {
                     sh '''#!/usr/bin/env bash
                         set -euo pipefail
 
+                        # Snyk resolves each module's pom.xml on its own, outside the Maven
+                        # reactor, so it can't substitute the ${revision} CI-friendly-version
+                        # placeholder used in every module's <parent><version>. Installing the
+                        # root POM alone isn't enough: modules also depend on common-library,
+                        # and plain `mvn install` copies the raw pom.xml into ~/.m2 without
+                        # flattening ${revision} either, so common-library's installed parent
+                        # reference is still the literal placeholder. Install both, then patch
+                        # the two installed POM copies in place so every downstream lookup
+                        # (root and common-library) resolves to a real version instead of
+                        # failing with SNYK-OS-MAVEN-0018 ("Cannot build Maven dependency tree").
+                        REVISION="$(sed -n 's/.*<revision>\\(.*\\)<\\/revision>.*/\\1/p' pom.xml | head -1)"
+                        mvn -N install -DskipTests -q
+                        mvn -pl common-library install -DskipTests -q
+                        sed -i "s/\\${revision}/${REVISION}/g" \
+                            "${HOME}/.m2/repository/com/yas/yas/${REVISION}/yas-${REVISION}.pom"
+                        sed -i "s/\\${revision}/${REVISION}/g" \
+                            "${HOME}/.m2/repository/com/yas/common-library/${REVISION}/common-library-${REVISION}.pom"
+
+                        # `snyk test` only prints to this build's console log -- it never
+                        # persists anything to the Snyk web dashboard. `snyk monitor` uploads
+                        # a snapshot per CI run instead, so results stay browsable after
+                        # Jenkins prunes old build logs (buildDiscarder keeps only 10 builds).
+                        # Project names get a "-ci-<branch/tag>" suffix so these CI-triggered
+                        # snapshots don't collide with the "yas-<module>" projects already
+                        # auto-imported by the separate Snyk GitHub integration.
+                        ci_identifier="${BRANCH_NAME:-${TAG_NAME:-unknown}}"
+
                         IFS=',' read -r -a modules <<< "${CHANGED_MODULES}"
                         for module in "${modules[@]}"; do
                             [ -n "$module" ] || continue
                             [ -f "${module}/pom.xml" ] || continue
                             echo "Snyk: scanning ${module}"
                             snyk test --file="${module}/pom.xml" --package-manager=maven || true
+                            snyk monitor --file="${module}/pom.xml" --package-manager=maven \
+                                --project-name="yas-${module}-ci-${ci_identifier}" || true
                         done
                     '''
                 }
