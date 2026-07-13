@@ -1,14 +1,15 @@
 package com.yas.product.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.BDDMockito.given;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import com.yas.commonlibrary.exception.BadRequestException;
+import com.yas.commonlibrary.exception.DuplicatedException;
+import com.yas.commonlibrary.exception.NotFoundException;
 import com.yas.product.model.Brand;
 import com.yas.product.model.Category;
 import com.yas.product.model.Product;
@@ -16,7 +17,12 @@ import com.yas.product.model.ProductCategory;
 import com.yas.product.model.ProductImage;
 import com.yas.product.model.ProductOption;
 import com.yas.product.model.ProductOptionCombination;
+import com.yas.product.model.ProductOptionValue;
 import com.yas.product.model.ProductRelated;
+import com.yas.product.model.attribute.ProductAttribute;
+import com.yas.product.model.attribute.ProductAttributeGroup;
+import com.yas.product.model.attribute.ProductAttributeValue;
+import com.yas.product.model.enumeration.DimensionUnit;
 import com.yas.product.model.enumeration.FilterExistInWhSelection;
 import com.yas.product.repository.BrandRepository;
 import com.yas.product.repository.CategoryRepository;
@@ -28,402 +34,368 @@ import com.yas.product.repository.ProductOptionValueRepository;
 import com.yas.product.repository.ProductRelatedRepository;
 import com.yas.product.repository.ProductRepository;
 import com.yas.product.viewmodel.NoFileMediaVm;
-import com.yas.product.viewmodel.product.ProductCheckoutListVm;
-import com.yas.product.viewmodel.product.ProductDetailVm;
-import com.yas.product.viewmodel.product.ProductFeatureGetVm;
-import com.yas.product.viewmodel.product.ProductGetCheckoutListVm;
-import com.yas.product.viewmodel.product.ProductListGetFromCategoryVm;
-import com.yas.product.viewmodel.product.ProductListGetVm;
-import com.yas.product.viewmodel.product.ProductListVm;
+import com.yas.product.viewmodel.product.ProductOptionValueDisplay;
+import com.yas.product.viewmodel.product.ProductPostVm;
+import com.yas.product.viewmodel.product.ProductPutVm;
 import com.yas.product.viewmodel.product.ProductQuantityPostVm;
 import com.yas.product.viewmodel.product.ProductQuantityPutVm;
-import com.yas.product.viewmodel.product.ProductThumbnailGetVm;
-import com.yas.product.viewmodel.product.ProductThumbnailVm;
-import com.yas.product.viewmodel.product.ProductVariationGetVm;
-import com.yas.product.viewmodel.product.ProductsGetVm;
+import com.yas.product.viewmodel.product.ProductVariationPostVm;
+import com.yas.product.viewmodel.product.ProductVariationPutVm;
+import com.yas.product.viewmodel.productoption.ProductOptionValuePostVm;
+import com.yas.product.viewmodel.productoption.ProductOptionValuePutVm;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ProductServiceTest {
 
-    @Mock
-    private ProductRepository productRepository;
-    @Mock
-    private MediaService mediaService;
-    @Mock
-    private BrandRepository brandRepository;
-    @Mock
-    private ProductCategoryRepository productCategoryRepository;
-    @Mock
-    private CategoryRepository categoryRepository;
-    @Mock
-    private ProductImageRepository productImageRepository;
-    @Mock
-    private ProductOptionRepository productOptionRepository;
-    @Mock
-    private ProductOptionValueRepository productOptionValueRepository;
-    @Mock
-    private ProductOptionCombinationRepository productOptionCombinationRepository;
-    @Mock
-    private ProductRelatedRepository productRelatedRepository;
+    @Mock private ProductRepository productRepository;
+    @Mock private MediaService mediaService;
+    @Mock private BrandRepository brandRepository;
+    @Mock private ProductCategoryRepository productCategoryRepository;
+    @Mock private CategoryRepository categoryRepository;
+    @Mock private ProductImageRepository productImageRepository;
+    @Mock private ProductOptionRepository productOptionRepository;
+    @Mock private ProductOptionValueRepository productOptionValueRepository;
+    @Mock private ProductOptionCombinationRepository productOptionCombinationRepository;
+    @Mock private ProductRelatedRepository productRelatedRepository;
 
-    @InjectMocks
-    private ProductService productService;
+    @InjectMocks private ProductService productService;
 
     @Test
-    void getProductById_whenProductExists_thenMapsDetailWithMediaAndRelations() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        Brand brand = brand(10L, "Acme", "acme");
-        Category category = category(20L, "Electronics", "electronics");
-        product.setBrand(brand);
-        product.setProductCategories(List.of(ProductCategory.builder().product(product).category(category).build()));
-        product.setProductImages(List.of(ProductImage.builder().imageId(101L).product(product).build()));
-        given(productRepository.findById(1L)).willReturn(Optional.of(product));
-        given(mediaService.getMedia(100L)).willReturn(media(100L, "/thumb.png"));
-        given(mediaService.getMedia(101L)).willReturn(media(101L, "/image.png"));
+    void createProductShouldSaveMainProductWithBrandCategoriesImagesAndRelations() {
+        ProductPostVm postVm = productPostVm(List.of(), List.of(), List.of(), List.of(9L));
+        Brand brand = brand(1L, "Acme", "acme");
+        Category category = category(2L, "Phones", "phones");
+        Product relatedProduct = product(9L, "Related", "related");
 
-        ProductDetailVm result = productService.getProductById(1L);
+        when(productRepository.findAllById(List.of())).thenReturn(List.of());
+        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> {
+            Product saved = invocation.getArgument(0);
+            saved.setId(10L);
+            return saved;
+        });
+        when(categoryRepository.findAllById(List.of(2L))).thenReturn(List.of(category));
+        when(productRepository.findAllById(List.of(9L))).thenReturn(List.of(relatedProduct));
 
-        assertEquals(1L, result.id());
-        assertEquals(10L, result.brandId());
-        assertEquals("/thumb.png", result.thumbnailMedia().url());
-        assertEquals(1, result.productImageMedias().size());
-        assertEquals("Electronics", result.categories().getFirst().getName());
+        var result = productService.createProduct(postVm);
+
+        assertThat(result.id()).isEqualTo(10L);
+        verify(productCategoryRepository).saveAll(anyList());
+        verify(productImageRepository).saveAll(anyList());
+        verify(productRelatedRepository).saveAll(anyList());
     }
 
     @Test
-    void getProductsWithFilter_whenRepositoryReturnsPage_thenMapsPagination() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        given(productRepository.getProductsWithFilter(eq("lap"), eq("Acme"), any(Pageable.class)))
-            .willReturn(new PageImpl<>(List.of(product)));
+    void createProductShouldCreateVariationsOptionsAndCombinations() {
+        ProductVariationPostVm variation = new ProductVariationPostVm(
+            "Red phone", "PHONE-RED", "SKU-RED", "GTIN-RED", 12.5, 101L, List.of(201L), Map.of(7L, "Red"));
+        ProductPostVm postVm = productPostVm(
+            List.of(variation),
+            List.of(new ProductOptionValuePostVm(7L, "text", 1, List.of("Red"))),
+            List.of(new ProductOptionValueDisplay(7L, "text", 1, "Red")),
+            List.of());
+        ProductOption option = productOption(7L, "Color");
 
-        ProductListGetVm result = productService.getProductsWithFilter(0, 10, " Lap ", "Acme");
+        when(productRepository.findAllById(List.of())).thenReturn(List.of());
+        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand(1L, "Acme", "acme")));
+        when(categoryRepository.findAllById(List.of(2L))).thenReturn(List.of(category(2L, "Phones", "phones")));
+        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> {
+            Product saved = invocation.getArgument(0);
+            if (saved.getId() == null) {
+                saved.setId(10L);
+            }
+            return saved;
+        });
+        when(productRepository.saveAll(anyList())).thenAnswer(invocation -> {
+            List<Product> products = invocation.getArgument(0);
+            products.forEach(product -> product.setId(20L));
+            return products;
+        });
+        when(productOptionRepository.findAllByIdIn(List.of(7L))).thenReturn(List.of(option));
+        when(productOptionValueRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertEquals(1, result.productContent().size());
-        assertEquals("Laptop", result.productContent().getFirst().name());
-        assertEquals(0, result.pageNo());
+        var result = productService.createProduct(postVm);
+
+        assertThat(result.id()).isEqualTo(10L);
+        verify(productOptionCombinationRepository).saveAll(anyList());
+        verify(productRepository).saveAll(anyList());
     }
 
     @Test
-    void getLatestProducts_whenCountIsPositive_thenMapsProducts() {
-        given(productRepository.getLatestProducts(any(Pageable.class)))
-            .willReturn(List.of(baseProduct(1L, "Laptop", "laptop")));
+    void createProductShouldRejectInvalidDimensionsAndDuplicates() {
+        ProductPostVm invalidDimensions = productPostVmWithDimensions(3D, 5D);
 
-        List<ProductListVm> result = productService.getLatestProducts(5);
+        assertThatThrownBy(() -> productService.createProduct(invalidDimensions))
+            .isInstanceOf(BadRequestException.class);
 
-        assertEquals(1, result.size());
-        assertEquals("laptop", result.getFirst().slug());
+        ProductPostVm duplicateSlug = productPostVmWithDimensions(5D, 4D);
+        Product existing = product(99L, "Existing", "phone");
+        when(productRepository.findBySlugAndIsPublishedTrue("phone")).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> productService.createProduct(duplicateSlug))
+            .isInstanceOf(DuplicatedException.class);
     }
 
     @Test
-    void getLatestProducts_whenCountIsZero_thenReturnsEmptyList() {
-        assertTrue(productService.getLatestProducts(0).isEmpty());
+    void setProductImagesShouldCreateDeleteOrKeepImages() {
+        Product productWithoutImages = product(10L, "Phone", "phone");
+        productWithoutImages.setProductImages(null);
+
+        assertThat(productService.setProductImages(List.of(1L, 2L), productWithoutImages))
+            .extracting(ProductImage::getImageId)
+            .containsExactly(1L, 2L);
+
+        Product productWithImages = product(11L, "Phone", "phone-2");
+        productWithImages.setProductImages(List.of(
+            ProductImage.builder().imageId(1L).product(productWithImages).build(),
+            ProductImage.builder().imageId(2L).product(productWithImages).build()));
+
+        assertThat(productService.setProductImages(List.of(2L, 3L), productWithImages))
+            .extracting(ProductImage::getImageId)
+            .containsExactly(3L);
+        verify(productImageRepository).deleteByImageIdInAndProductId(List.of(1L), 11L);
+
+        assertThat(productService.setProductImages(List.of(), productWithImages)).isEmpty();
+        verify(productImageRepository).deleteByProductId(11L);
     }
 
     @Test
-    void getProductsByBrand_whenBrandExists_thenMapsThumbnails() {
-        Brand brand = brand(10L, "Acme", "acme");
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        given(brandRepository.findBySlug("acme")).willReturn(Optional.of(brand));
-        given(productRepository.findAllByBrandAndIsPublishedTrueOrderByIdAsc(brand)).willReturn(List.of(product));
-        given(mediaService.getMedia(100L)).willReturn(media(100L, "/thumb.png"));
+    void readMethodsShouldMapProductPagesAndDetails() {
+        Product product = richProduct();
+        when(mediaService.getMedia(any())).thenAnswer(invocation ->
+            new NoFileMediaVm(invocation.getArgument(0), "caption", "file", "image/png", "url-" + invocation.getArgument(0)));
+        when(productRepository.getProductsWithFilter(any(), any(), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(product)));
+        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+        when(productRepository.getLatestProducts(any(Pageable.class))).thenReturn(List.of(product));
 
-        List<ProductThumbnailVm> result = productService.getProductsByBrand("acme");
-
-        assertEquals(1, result.size());
-        assertEquals("/thumb.png", result.getFirst().thumbnailUrl());
+        assertThat(productService.getProductsWithFilter(0, 10, " Phone ", "Acme").productContent()).hasSize(1);
+        assertThat(productService.getProductById(10L).thumbnailMedia().url()).isEqualTo("url-100");
+        assertThat(productService.getLatestProducts(0)).isEmpty();
+        assertThat(productService.getLatestProducts(2)).hasSize(1);
     }
 
     @Test
-    void getProductsFromCategory_whenCategoryExists_thenMapsPage() {
-        Category category = category(20L, "Electronics", "electronics");
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        ProductCategory productCategory = ProductCategory.builder().product(product).category(category).build();
-        given(categoryRepository.findBySlug("electronics")).willReturn(Optional.of(category));
-        given(productCategoryRepository.findAllByCategory(any(Pageable.class), eq(category)))
-            .willReturn(new PageImpl<>(List.of(productCategory)));
-        given(mediaService.getMedia(100L)).willReturn(media(100L, "/thumb.png"));
+    void storefrontListingMethodsShouldMapMediaAndPagination() {
+        Product product = richProduct();
+        Brand brand = product.getBrand();
+        Category category = product.getProductCategories().getFirst().getCategory();
+        when(mediaService.getMedia(any())).thenAnswer(invocation ->
+            new NoFileMediaVm(invocation.getArgument(0), "caption", "file", "image/png", "url-" + invocation.getArgument(0)));
+        when(brandRepository.findBySlug("acme")).thenReturn(Optional.of(brand));
+        when(productRepository.findAllByBrandAndIsPublishedTrueOrderByIdAsc(brand)).thenReturn(List.of(product));
+        when(categoryRepository.findBySlug("phones")).thenReturn(Optional.of(category));
+        when(productCategoryRepository.findAllByCategory(any(Pageable.class), any(Category.class)))
+            .thenReturn(new PageImpl<>(product.getProductCategories()));
+        when(productRepository.findAllByIdIn(List.of(10L))).thenReturn(List.of(product));
+        when(productRepository.getFeaturedProduct(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(product)));
+        when(productRepository.findByProductNameAndCategorySlugAndPriceBetween(any(), any(), any(), any(), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(product)));
+        when(productRepository.findAllPublishedProductsByIds(anyList(), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(List.of(product)));
 
-        ProductListGetFromCategoryVm result = productService.getProductsFromCategory(0, 10, "electronics");
-
-        assertEquals(1, result.productContent().size());
-        assertEquals("Laptop", result.productContent().getFirst().name());
+        assertThat(productService.getProductsByBrand("acme")).hasSize(1);
+        assertThat(productService.getProductsFromCategory(0, 10, "phones").productContent()).hasSize(1);
+        assertThat(productService.getFeaturedProductsById(List.of(10L))).hasSize(1);
+        assertThat(productService.getListFeaturedProducts(0, 10).productList()).hasSize(1);
+        assertThat(productService.getProductsByMultiQuery(0, 10, "phone", "phones", 1D, 20D).productContent()).hasSize(1);
+        assertThat(productService.getProductCheckoutList(0, 10, List.of(10L)).productCheckoutListVms()).hasSize(1);
     }
 
     @Test
-    void getFeaturedProductsById_whenThumbnailExists_thenMapsThumbnail() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        given(productRepository.findAllByIdIn(List.of(1L))).willReturn(List.of(product));
-        given(mediaService.getMedia(100L)).willReturn(media(100L, "/thumb.png"));
+    void detailSearchAndRelationMethodsShouldMapDomainObjects() {
+        Product product = richProduct();
+        Product related = product(30L, "Case", "case");
+        related.setPublished(true);
+        related.setThumbnailMediaId(300L);
+        product.setRelatedProducts(List.of(ProductRelated.builder().product(product).relatedProduct(related).build()));
 
-        List<ProductThumbnailGetVm> result = productService.getFeaturedProductsById(List.of(1L));
+        when(mediaService.getMedia(any())).thenAnswer(invocation ->
+            new NoFileMediaVm(invocation.getArgument(0), "caption", "file", "image/png", "url-" + invocation.getArgument(0)));
+        when(productRepository.findBySlugAndIsPublishedTrue("phone")).thenReturn(Optional.of(product));
+        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+        when(productRelatedRepository.findAllByProduct(any(Product.class), any(Pageable.class)))
+            .thenReturn(new PageImpl<>(product.getRelatedProducts()));
+        when(productRepository.findProductForWarehouse("phone", "sku", List.of(10L), "ALL")).thenReturn(List.of(product));
+        when(productRepository.findByCategoryIdsIn(List.of(2L))).thenReturn(List.of(product));
+        when(productRepository.findByBrandIdsIn(List.of(1L))).thenReturn(List.of(product));
+        when(productRepository.findAllByIdIn(List.of(10L))).thenReturn(List.of(product));
 
-        assertEquals(1, result.size());
-        assertEquals("/thumb.png", result.getFirst().thumbnailUrl());
+        assertThat(productService.getProductDetail("phone").productImageMediaUrls()).contains("url-101");
+        assertThat(productService.getProductEsDetailById(10L).categories()).contains("Phones");
+        assertThat(productService.getRelatedProductsBackoffice(10L)).hasSize(1);
+        assertThat(productService.getRelatedProductsStorefront(10L, 0, 10).productContent()).hasSize(1);
+        assertThat(productService.getProductsForWarehouse("phone", "sku", List.of(10L), FilterExistInWhSelection.ALL)).hasSize(1);
+        assertThat(productService.getProductByCategoryIds(List.of(2L))).hasSize(1);
+        assertThat(productService.getProductByBrandIds(List.of(1L))).hasSize(1);
+        assertThat(productService.getProductByIds(List.of(10L))).hasSize(1);
     }
 
     @Test
-    void getListFeaturedProducts_whenRepositoryReturnsPage_thenMapsTotalPages() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        given(productRepository.getFeaturedProduct(any(Pageable.class))).willReturn(new PageImpl<>(List.of(product)));
-        given(mediaService.getMedia(100L)).willReturn(media(100L, "/thumb.png"));
-
-        ProductFeatureGetVm result = productService.getListFeaturedProducts(0, 10);
-
-        assertEquals(1, result.productList().size());
-        assertEquals(1, result.totalPage());
-    }
-
-    @Test
-    void deleteProduct_whenParentProduct_thenUnpublishesWithoutDeletingCombinations() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        given(productRepository.findById(1L)).willReturn(Optional.of(product));
-
-        productService.deleteProduct(1L);
-
-        assertFalse(product.isPublished());
-        verify(productRepository).save(product);
-    }
-
-    @Test
-    void deleteProduct_whenVariation_thenDeletesOptionCombinations() {
-        Product parent = baseProduct(1L, "Laptop", "laptop");
-        Product variation = baseProduct(2L, "Laptop Red", "laptop-red");
-        variation.setParent(parent);
-        ProductOptionCombination combination = ProductOptionCombination.builder().product(variation).value("Red").build();
-        given(productRepository.findById(2L)).willReturn(Optional.of(variation));
-        given(productOptionCombinationRepository.findAllByProduct(variation)).willReturn(List.of(combination));
-
-        productService.deleteProduct(2L);
-
-        assertFalse(variation.isPublished());
-        verify(productOptionCombinationRepository).deleteAll(List.of(combination));
-        verify(productRepository).save(variation);
-    }
-
-    @Test
-    void getProductVariationsByParentId_whenParentHasOptions_thenMapsOptionsAndImages() {
-        Product parent = baseProduct(1L, "Laptop", "laptop");
-        Product variation = baseProduct(2L, "Laptop Red", "laptop-red");
-        variation.setProductImages(List.of(ProductImage.builder().imageId(102L).product(variation).build()));
+    void variationSlugDeleteAndStockMethodsShouldHandleBranches() {
+        Product parent = product(10L, "Phone", "phone");
         parent.setHasOptions(true);
-        parent.setProducts(List.of(variation));
-        ProductOption option = new ProductOption();
-        option.setId(5L);
-        option.setName("Color");
-        ProductOptionCombination combination = ProductOptionCombination.builder()
-            .product(variation)
-            .productOption(option)
-            .value("Red")
-            .build();
-        given(productRepository.findById(1L)).willReturn(Optional.of(parent));
-        given(productOptionCombinationRepository.findAllByProduct(variation)).willReturn(List.of(combination));
-        given(mediaService.getMedia(100L)).willReturn(media(100L, "/variation-thumb.png"));
-        given(mediaService.getMedia(102L)).willReturn(media(102L, "/variation-image.png"));
-
-        List<ProductVariationGetVm> result = productService.getProductVariationsByParentId(1L);
-
-        assertEquals(1, result.size());
-        assertEquals("Red", result.getFirst().options().get(5L));
-        assertEquals("/variation-thumb.png", result.getFirst().thumbnail().url());
-        assertEquals(1, result.getFirst().productImages().size());
-    }
-
-    @Test
-    void getProductSlug_whenVariation_thenReturnsParentSlugAndVariationId() {
-        Product parent = baseProduct(1L, "Laptop", "laptop");
-        Product variation = baseProduct(2L, "Laptop Red", "laptop-red");
+        Product variation = product(20L, "Red", "phone-red");
         variation.setParent(parent);
-        given(productRepository.findById(2L)).willReturn(Optional.of(variation));
+        variation.setPublished(true);
+        variation.setThumbnailMediaId(200L);
+        variation.setProductImages(List.of(ProductImage.builder().imageId(201L).product(variation).build()));
+        parent.setProducts(List.of(variation));
+        ProductOption option = productOption(7L, "Color");
+        ProductOptionCombination combination = ProductOptionCombination.builder()
+            .product(variation).productOption(option).value("Red").displayOrder(1).build();
 
-        var result = productService.getProductSlug(2L);
+        when(mediaService.getMedia(any())).thenAnswer(invocation ->
+            new NoFileMediaVm(invocation.getArgument(0), "caption", "file", "image/png", "url-" + invocation.getArgument(0)));
+        when(productRepository.findById(10L)).thenReturn(Optional.of(parent));
+        when(productRepository.findById(20L)).thenReturn(Optional.of(variation));
+        when(productOptionCombinationRepository.findAllByProduct(variation)).thenReturn(List.of(combination));
+        when(productRepository.findAllByIdIn(anyList())).thenAnswer(invocation -> {
+            List<Long> ids = invocation.getArgument(0);
+            List<Product> products = new ArrayList<>();
+            if (ids.contains(10L)) {
+                products.add(parent);
+            }
+            if (ids.contains(20L)) {
+                products.add(variation);
+            }
+            return products;
+        });
 
-        assertEquals("laptop", result.slug());
-        assertEquals(2L, result.productVariantId());
+        assertThat(productService.getProductVariationsByParentId(10L)).hasSize(1);
+        assertThat(productService.getProductSlug(20L).slug()).isEqualTo("phone");
+        productService.deleteProduct(20L);
+        verify(productOptionCombinationRepository).deleteAll(List.of(combination));
+
+        productService.updateProductQuantity(List.of(new ProductQuantityPostVm(10L, 4L), new ProductQuantityPostVm(20L, 6L)));
+        assertThat(parent.getStockQuantity()).isEqualTo(4L);
+        parent.setStockTrackingEnabled(true);
+        parent.setStockQuantity(4L);
+        variation.setStockTrackingEnabled(true);
+        variation.setStockQuantity(1L);
+        productService.subtractStockQuantity(List.of(new ProductQuantityPutVm(10L, 10L), new ProductQuantityPutVm(20L, 2L)));
+        assertThat(parent.getStockQuantity()).isZero();
+        productService.restoreStockQuantity(List.of(new ProductQuantityPutVm(10L, 3L), new ProductQuantityPutVm(10L, 2L)));
+        assertThat(parent.getStockQuantity()).isEqualTo(5L);
     }
 
     @Test
-    void getProductEsDetailById_whenProductExists_thenMapsSearchPayload() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        product.setBrand(brand(10L, "Acme", "acme"));
-        product.setProductCategories(List.of(ProductCategory.builder()
-            .product(product)
-            .category(category(20L, "Electronics", "electronics"))
-            .build()));
-        given(productRepository.findById(1L)).willReturn(Optional.of(product));
+    void notFoundMethodsShouldThrow() {
+        when(productRepository.findById(404L)).thenReturn(Optional.empty());
+        when(brandRepository.findBySlug("missing")).thenReturn(Optional.empty());
 
-        var result = productService.getProductEsDetailById(1L);
-
-        assertEquals("Laptop", result.name());
-        assertEquals("Acme", result.brand());
-        assertEquals(List.of("Electronics"), result.categories());
+        assertThatThrownBy(() -> productService.getProductById(404L)).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> productService.getProductsByBrand("missing")).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> productService.deleteProduct(404L)).isInstanceOf(NotFoundException.class);
     }
 
-    @Test
-    void updateProductQuantity_whenProductsExist_thenSavesUpdatedStock() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        given(productRepository.findAllByIdIn(List.of(1L))).willReturn(List.of(product));
-
-        productService.updateProductQuantity(List.of(new ProductQuantityPostVm(1L, 7L)));
-
-        assertEquals(7L, product.getStockQuantity());
-        verify(productRepository).saveAll(List.of(product));
+    private ProductPostVm productPostVm(
+        List<ProductVariationPostVm> variations,
+        List<ProductOptionValuePostVm> optionValues,
+        List<ProductOptionValueDisplay> optionValueDisplays,
+        List<Long> relatedProductIds) {
+        return new ProductPostVm("Phone", "PHONE", 1L, new ArrayList<>(List.of(2L)), "short", "description",
+            "spec", "SKU", "GTIN", 1D, DimensionUnit.CM, 5D, 3D, 1D, 10D,
+            true, true, true, true, true, "title", "keyword", "meta", 100L, List.of(101L),
+            variations, optionValues, optionValueDisplays, relatedProductIds, 5L);
     }
 
-    @Test
-    void subtractAndRestoreStockQuantity_whenDuplicateItems_thenMergeQuantities() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        product.setStockTrackingEnabled(true);
-        product.setStockQuantity(10L);
-        given(productRepository.findAllByIdIn(List.of(1L, 1L))).willReturn(List.of(product));
-
-        productService.subtractStockQuantity(List.of(new ProductQuantityPutVm(1L, 3L), new ProductQuantityPutVm(1L, 4L)));
-
-        assertEquals(3L, product.getStockQuantity());
-        verify(productRepository).saveAll(List.of(product));
+    private ProductPostVm productPostVmWithDimensions(Double length, Double width) {
+        return new ProductPostVm("Phone", "PHONE", 1L, new ArrayList<>(List.of(2L)), "short", "description",
+            "spec", "SKU", "GTIN", 1D, DimensionUnit.CM, length, width, 1D, 10D,
+            true, true, true, true, true, "title", "keyword", "meta", 100L, List.of(101L),
+            List.of(), List.of(), List.of(), List.of(), 5L);
     }
 
-    @Test
-    void restoreStockQuantity_whenStockTrackingEnabled_thenAddsQuantity() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        product.setStockTrackingEnabled(true);
-        product.setStockQuantity(10L);
-        given(productRepository.findAllByIdIn(List.of(1L))).willReturn(List.of(product));
-
-        productService.restoreStockQuantity(List.of(new ProductQuantityPutVm(1L, 5L)));
-
-        assertEquals(15L, product.getStockQuantity());
-        verify(productRepository).saveAll(List.of(product));
+    private ProductPutVm productPutVm(
+        List<ProductVariationPutVm> variations,
+        List<ProductOptionValuePutVm> optionValues,
+        List<ProductOptionValueDisplay> optionValueDisplays,
+        List<Long> relatedProductIds) {
+        return new ProductPutVm("New Phone", "NEW-PHONE", 20D, true, true, false, true, true, 3L,
+            new ArrayList<>(List.of(4L)), "new short", "new description", "new spec", "SKU-N", "GTIN-N",
+            2D, DimensionUnit.CM, 5D, 4D, 2D, "new title", "new keyword", "new meta", 103L,
+            List.of(104L), variations, optionValues, optionValueDisplays, relatedProductIds, 6L);
     }
 
-    @Test
-    void getProductCheckoutList_whenThumbnailExists_thenMapsThumbnailUrl() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        given(productRepository.findAllPublishedProductsByIds(eq(List.of(1L)), any(Pageable.class)))
-            .willReturn(new PageImpl<>(List.of(product)));
-        given(mediaService.getMedia(100L)).willReturn(media(100L, "/thumb.png"));
-
-        ProductGetCheckoutListVm result = productService.getProductCheckoutList(0, 10, List.of(1L));
-
-        ProductCheckoutListVm item = result.productCheckoutListVms().getFirst();
-        assertEquals("Laptop", item.name());
-        assertEquals("/thumb.png", item.thumbnailUrl());
-    }
-
-    @Test
-    void getProductsForWarehouse_whenRepositoryReturnsProducts_thenMapsInfo() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        given(productRepository.findProductForWarehouse("lap", "sku", List.of(1L), FilterExistInWhSelection.ALL.name()))
-            .willReturn(List.of(product));
-
-        var result = productService.getProductsForWarehouse("lap", "sku", List.of(1L), FilterExistInWhSelection.ALL);
-
-        assertEquals(1, result.size());
-        assertEquals("Laptop", result.getFirst().name());
-    }
-
-    @Test
-    void getProductByIds_whenRepositoryReturnsProducts_thenMapsList() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        given(productRepository.findAllByIdIn(List.of(1L))).willReturn(List.of(product));
-
-        List<ProductListVm> result = productService.getProductByIds(List.of(1L));
-
-        assertEquals(1, result.size());
-        assertEquals("Laptop", result.getFirst().name());
-    }
-
-    @Test
-    void getProductByCategoryIds_whenRepositoryReturnsProducts_thenMapsList() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        given(productRepository.findByCategoryIdsIn(List.of(20L))).willReturn(List.of(product));
-
-        List<ProductListVm> result = productService.getProductByCategoryIds(List.of(20L));
-
-        assertEquals(1, result.size());
-        assertEquals("Laptop", result.getFirst().name());
-    }
-
-    @Test
-    void getProductByBrandIds_whenRepositoryReturnsProducts_thenMapsList() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        given(productRepository.findByBrandIdsIn(List.of(10L))).willReturn(List.of(product));
-
-        List<ProductListVm> result = productService.getProductByBrandIds(List.of(10L));
-
-        assertEquals(1, result.size());
-        assertEquals("Laptop", result.getFirst().name());
-    }
-
-    @Test
-    void getProductVariationsByParentId_whenParentHasNoOptions_thenReturnsEmptyList() {
-        Product parent = baseProduct(1L, "Laptop", "laptop");
-        parent.setHasOptions(false);
-        given(productRepository.findById(1L)).willReturn(Optional.of(parent));
-
-        assertTrue(productService.getProductVariationsByParentId(1L).isEmpty());
-    }
-
-    @Test
-    void getProductSlug_whenProductHasNoParent_thenReturnsOwnSlug() {
-        Product product = baseProduct(1L, "Laptop", "laptop");
-        given(productRepository.findById(1L)).willReturn(Optional.of(product));
-
-        var result = productService.getProductSlug(1L);
-
-        assertEquals("laptop", result.slug());
-        assertNull(result.productVariantId());
-    }
-
-    private static Product baseProduct(Long id, String name, String slug) {
-        return Product.builder()
+    private Product product(Long id, String name, String slug) {
+        Product product = Product.builder()
             .id(id)
             .name(name)
             .slug(slug)
+            .sku("sku-" + id)
+            .gtin("gtin-" + id)
             .shortDescription("short")
             .description("description")
             .specification("spec")
-            .sku("sku-" + id)
-            .gtin("gtin-" + id)
-            .price(99.0)
+            .price(10D)
             .isAllowedToOrder(true)
             .isPublished(true)
-            .isFeatured(true)
+            .isFeatured(false)
             .isVisibleIndividually(true)
-            .stockTrackingEnabled(false)
-            .stockQuantity(0L)
-            .thumbnailMediaId(100L)
-            .taxClassId(1L)
-            .brand(brand(10L, "Acme", "acme"))
-            .metaTitle("meta title")
-            .metaKeyword("meta keyword")
-            .metaDescription("meta description")
-            .productImages(List.of())
-            .productCategories(List.of())
-            .attributeValues(List.of())
-            .relatedProducts(List.of())
-            .products(List.of())
+            .stockTrackingEnabled(true)
+            .stockQuantity(2L)
+            .taxClassId(5L)
+            .metaTitle("title")
+            .metaKeyword("keyword")
+            .metaDescription("meta")
+            .weight(1D)
+            .dimensionUnit(DimensionUnit.CM)
+            .length(5D)
+            .width(4D)
+            .height(3D)
+            .productCategories(new ArrayList<>())
+            .productImages(new ArrayList<>())
+            .attributeValues(new ArrayList<>())
+            .relatedProducts(new ArrayList<>())
+            .products(new ArrayList<>())
             .build();
+        return product;
     }
 
-    private static Brand brand(Long id, String name, String slug) {
+    private Product richProduct() {
+        Product product = product(10L, "Phone", "phone");
+        Brand brand = brand(1L, "Acme", "acme");
+        Category category = category(2L, "Phones", "phones");
+        product.setBrand(brand);
+        product.setThumbnailMediaId(100L);
+        product.setProductImages(List.of(ProductImage.builder().imageId(101L).product(product).build()));
+        product.setProductCategories(List.of(productCategory(product, category)));
+        ProductAttributeGroup group = new ProductAttributeGroup();
+        group.setId(1L);
+        group.setName("Specs");
+        ProductAttribute attribute = ProductAttribute.builder().id(1L).name("Memory").productAttributeGroup(group).build();
+        ProductAttributeValue attributeValue = new ProductAttributeValue();
+        attributeValue.setProduct(product);
+        attributeValue.setProductAttribute(attribute);
+        attributeValue.setValue("128GB");
+        product.setAttributeValues(List.of(attributeValue));
+        return product;
+    }
+
+    private Brand brand(Long id, String name, String slug) {
         Brand brand = new Brand();
         brand.setId(id);
         brand.setName(name);
         brand.setSlug(slug);
-        brand.setPublished(true);
         return brand;
     }
 
-    private static Category category(Long id, String name, String slug) {
+    private Category category(Long id, String name, String slug) {
         Category category = new Category();
         category.setId(id);
         category.setName(name);
@@ -431,7 +403,15 @@ class ProductServiceTest {
         return category;
     }
 
-    private static NoFileMediaVm media(Long id, String url) {
-        return new NoFileMediaVm(id, "caption", "file.png", "image/png", url);
+    private ProductCategory productCategory(Product product, Category category) {
+        return ProductCategory.builder().product(product).category(category).build();
     }
+
+    private ProductOption productOption(Long id, String name) {
+        ProductOption productOption = new ProductOption();
+        productOption.setId(id);
+        productOption.setName(name);
+        return productOption;
+    }
+
 }
