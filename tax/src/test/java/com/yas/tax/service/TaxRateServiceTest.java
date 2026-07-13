@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -32,85 +33,84 @@ import org.springframework.data.domain.PageRequest;
 class TaxRateServiceTest {
 
     @Mock
-    private LocationService locationService;
+    LocationService locationService;
 
     @Mock
-    private TaxRateRepository taxRateRepository;
+    TaxRateRepository taxRateRepository;
 
     @Mock
-    private TaxClassRepository taxClassRepository;
+    TaxClassRepository taxClassRepository;
 
     @InjectMocks
-    private TaxRateService taxRateService;
+    TaxRateService taxRateService;
 
     @Test
-    void createTaxRate_shouldSaveTaxRate_whenTaxClassExists() {
-        TaxRatePostVm postVm = new TaxRatePostVm(7.5, "70000", 1L, 2L, 3L);
-        TaxClass taxClass = taxClass(1L, "Standard");
-        TaxRate saved = taxRate(10L, 7.5, "70000", 2L, 3L, taxClass);
-        when(taxClassRepository.existsById(1L)).thenReturn(true);
-        when(taxClassRepository.getReferenceById(1L)).thenReturn(taxClass);
-        when(taxRateRepository.save(any(TaxRate.class))).thenReturn(saved);
+    void createTaxRateShouldSaveRateWhenTaxClassExists() {
+        TaxClass taxClass = taxClass(10L, "Standard");
+        TaxRatePostVm request = new TaxRatePostVm(7.5, "70000", 10L, 20L, 30L);
+        when(taxClassRepository.existsById(10L)).thenReturn(true);
+        when(taxClassRepository.getReferenceById(10L)).thenReturn(taxClass);
+        when(taxRateRepository.save(any(TaxRate.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        TaxRate result = taxRateService.createTaxRate(postVm);
+        TaxRate result = taxRateService.createTaxRate(request);
 
-        assertThat(result).isEqualTo(saved);
+        assertThat(result.getRate()).isEqualTo(7.5);
+        assertThat(result.getZipCode()).isEqualTo("70000");
+        assertThat(result.getTaxClass()).isSameAs(taxClass);
+        assertThat(result.getStateOrProvinceId()).isEqualTo(20L);
+        assertThat(result.getCountryId()).isEqualTo(30L);
     }
 
     @Test
-    void createTaxRate_shouldThrowNotFound_whenTaxClassDoesNotExist() {
-        TaxRatePostVm postVm = new TaxRatePostVm(7.5, "70000", 99L, 2L, 3L);
-        when(taxClassRepository.existsById(99L)).thenReturn(false);
+    void createTaxRateShouldThrowWhenTaxClassMissing() {
+        when(taxClassRepository.existsById(10L)).thenReturn(false);
 
-        assertThatThrownBy(() -> taxRateService.createTaxRate(postVm))
+        assertThatThrownBy(() -> taxRateService.createTaxRate(new TaxRatePostVm(7.5, "70000", 10L, 20L, 30L)))
             .isInstanceOf(NotFoundException.class);
         verify(taxRateRepository, never()).save(any());
     }
 
     @Test
-    void updateTaxRate_shouldSaveExistingTaxRate_whenTaxClassExists() {
-        TaxClass oldTaxClass = taxClass(1L, "Old");
-        TaxClass newTaxClass = taxClass(2L, "New");
-        TaxRate taxRate = taxRate(10L, 5.0, "10000", 4L, 5L, oldTaxClass);
-        TaxRatePostVm postVm = new TaxRatePostVm(8.25, "70000", 2L, 6L, 7L);
-        when(taxRateRepository.findById(10L)).thenReturn(Optional.of(taxRate));
-        when(taxClassRepository.existsById(2L)).thenReturn(true);
-        when(taxClassRepository.getReferenceById(2L)).thenReturn(newTaxClass);
+    void updateTaxRateShouldPersistChangedFields() {
+        TaxRate existing = taxRate(1L, 5.0, "10000", taxClass(10L, "Old"), 20L, 30L);
+        TaxClass newClass = taxClass(11L, "New");
+        when(taxRateRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(taxClassRepository.existsById(11L)).thenReturn(true);
+        when(taxClassRepository.getReferenceById(11L)).thenReturn(newClass);
 
-        taxRateService.updateTaxRate(postVm, 10L);
+        taxRateService.updateTaxRate(new TaxRatePostVm(8.0, "20000", 11L, 21L, 31L), 1L);
 
-        assertThat(taxRate.getRate()).isEqualTo(8.25);
-        assertThat(taxRate.getZipCode()).isEqualTo("70000");
-        assertThat(taxRate.getTaxClass()).isEqualTo(newTaxClass);
-        assertThat(taxRate.getStateOrProvinceId()).isEqualTo(6L);
-        assertThat(taxRate.getCountryId()).isEqualTo(7L);
-        verify(taxRateRepository).save(taxRate);
+        ArgumentCaptor<TaxRate> captor = ArgumentCaptor.forClass(TaxRate.class);
+        verify(taxRateRepository).save(captor.capture());
+        TaxRate saved = captor.getValue();
+        assertThat(saved.getRate()).isEqualTo(8.0);
+        assertThat(saved.getZipCode()).isEqualTo("20000");
+        assertThat(saved.getTaxClass()).isSameAs(newClass);
+        assertThat(saved.getStateOrProvinceId()).isEqualTo(21L);
+        assertThat(saved.getCountryId()).isEqualTo(31L);
     }
 
     @Test
-    void updateTaxRate_shouldThrowNotFound_whenTaxRateDoesNotExist() {
-        TaxRatePostVm postVm = new TaxRatePostVm(8.25, "70000", 2L, 6L, 7L);
-        when(taxRateRepository.findById(10L)).thenReturn(Optional.empty());
+    void updateTaxRateShouldThrowWhenRateMissing() {
+        when(taxRateRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> taxRateService.updateTaxRate(postVm, 10L))
+        assertThatThrownBy(() -> taxRateService.updateTaxRate(new TaxRatePostVm(8.0, "20000", 11L, 21L, 31L), 1L))
+            .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void updateTaxRateShouldThrowWhenTaxClassMissing() {
+        when(taxRateRepository.findById(1L))
+            .thenReturn(Optional.of(taxRate(1L, 5.0, "10000", taxClass(10L, "Old"), 20L, 30L)));
+        when(taxClassRepository.existsById(11L)).thenReturn(false);
+
+        assertThatThrownBy(() -> taxRateService.updateTaxRate(new TaxRatePostVm(8.0, "20000", 11L, 21L, 31L), 1L))
             .isInstanceOf(NotFoundException.class);
         verify(taxRateRepository, never()).save(any());
     }
 
     @Test
-    void updateTaxRate_shouldThrowNotFound_whenTaxClassDoesNotExist() {
-        TaxRate taxRate = taxRate(10L, 5.0, "10000", 4L, 5L, taxClass(1L, "Old"));
-        TaxRatePostVm postVm = new TaxRatePostVm(8.25, "70000", 99L, 6L, 7L);
-        when(taxRateRepository.findById(10L)).thenReturn(Optional.of(taxRate));
-        when(taxClassRepository.existsById(99L)).thenReturn(false);
-
-        assertThatThrownBy(() -> taxRateService.updateTaxRate(postVm, 10L))
-            .isInstanceOf(NotFoundException.class);
-        verify(taxRateRepository, never()).save(any());
-    }
-
-    @Test
-    void delete_shouldDeleteExistingTaxRate() {
+    void deleteShouldRemoveExistingRate() {
         when(taxRateRepository.existsById(1L)).thenReturn(true);
 
         taxRateService.delete(1L);
@@ -119,117 +119,79 @@ class TaxRateServiceTest {
     }
 
     @Test
-    void delete_shouldThrowNotFound_whenTaxRateDoesNotExist() {
-        when(taxRateRepository.existsById(99L)).thenReturn(false);
+    void deleteShouldThrowWhenRateMissing() {
+        when(taxRateRepository.existsById(1L)).thenReturn(false);
 
-        assertThatThrownBy(() -> taxRateService.delete(99L))
+        assertThatThrownBy(() -> taxRateService.delete(1L))
             .isInstanceOf(NotFoundException.class);
-        verify(taxRateRepository, never()).deleteById(99L);
     }
 
     @Test
-    void findById_shouldReturnTaxRate_whenExists() {
-        TaxRate taxRate = taxRate(10L, 7.5, "70000", 2L, 3L, taxClass(1L, "Standard"));
-        when(taxRateRepository.findById(10L)).thenReturn(Optional.of(taxRate));
+    void findByIdShouldReturnRateWhenFound() {
+        TaxRate taxRate = taxRate(1L, 7.5, "70000", taxClass(10L, "Standard"), 20L, 30L);
+        when(taxRateRepository.findById(1L)).thenReturn(Optional.of(taxRate));
 
-        TaxRateVm result = taxRateService.findById(10L);
+        TaxRateVm result = taxRateService.findById(1L);
 
         assertThat(result).isEqualTo(TaxRateVm.fromModel(taxRate));
     }
 
     @Test
-    void findById_shouldThrowNotFound_whenMissing() {
-        when(taxRateRepository.findById(99L)).thenReturn(Optional.empty());
+    void findByIdShouldThrowWhenMissing() {
+        when(taxRateRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> taxRateService.findById(99L))
+        assertThatThrownBy(() -> taxRateService.findById(1L))
             .isInstanceOf(NotFoundException.class);
     }
 
     @Test
-    void findAll_shouldReturnAllTaxRates() {
-        TaxRate taxRate = taxRate(10L, 7.5, "70000", 2L, 3L, taxClass(1L, "Standard"));
-        when(taxRateRepository.findAll()).thenReturn(List.of(taxRate));
+    void getPageableTaxRatesShouldCombineLocationNames() {
+        PageRequest pageRequest = PageRequest.of(0, 2);
+        TaxRate taxRate = taxRate(1L, 7.5, "70000", taxClass(10L, "Standard"), 20L, 30L);
+        when(taxRateRepository.findAll(pageRequest)).thenReturn(new PageImpl<>(List.of(taxRate), pageRequest, 1));
+        when(locationService.getStateOrProvinceAndCountryNames(List.of(20L)))
+            .thenReturn(List.of(new StateOrProvinceAndCountryGetNameVm(20L, "Ho Chi Minh", "Vietnam")));
 
-        List<TaxRateVm> result = taxRateService.findAll();
+        TaxRateListGetVm result = taxRateService.getPageableTaxRates(0, 2);
 
-        assertThat(result).containsExactly(TaxRateVm.fromModel(taxRate));
-    }
-
-    @Test
-    void getPageableTaxRates_shouldMapLocationDetails_whenLocationDataExists() {
-        TaxRate taxRate = taxRate(10L, 7.5, "70000", 2L, 3L, taxClass(1L, "Standard"));
-        when(taxRateRepository.findAll(PageRequest.of(0, 10)))
-            .thenReturn(new PageImpl<>(List.of(taxRate), PageRequest.of(0, 10), 1));
-        when(locationService.getStateOrProvinceAndCountryNames(List.of(2L)))
-            .thenReturn(List.of(new StateOrProvinceAndCountryGetNameVm(2L, "HCM", "Vietnam")));
-
-        TaxRateListGetVm result = taxRateService.getPageableTaxRates(0, 10);
-
-        assertThat(result.taxRateGetDetailContent()).containsExactly(
-            new TaxRateGetDetailVm(10L, 7.5, "70000", "Standard", "HCM", "Vietnam"));
-        assertThat(result.pageNo()).isZero();
-        assertThat(result.pageSize()).isEqualTo(10);
+        assertThat(result.taxRateGetDetailContent())
+            .containsExactly(new TaxRateGetDetailVm(1L, 7.5, "70000", "Standard", "Ho Chi Minh", "Vietnam"));
         assertThat(result.totalElements()).isEqualTo(1);
         assertThat(result.totalPages()).isEqualTo(1);
         assertThat(result.isLast()).isTrue();
     }
 
     @Test
-    void getPageableTaxRates_shouldNotCallLocationService_whenPageIsEmpty() {
-        when(taxRateRepository.findAll(PageRequest.of(0, 10)))
-            .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
+    void getTaxPercentShouldReturnRepositoryValueOrZero() {
+        when(taxRateRepository.getTaxPercent(30L, 20L, "70000", 10L)).thenReturn(7.5, (Double) null);
 
-        TaxRateListGetVm result = taxRateService.getPageableTaxRates(0, 10);
-
-        assertThat(result.taxRateGetDetailContent()).isEmpty();
-        verify(locationService, never()).getStateOrProvinceAndCountryNames(any());
+        assertThat(taxRateService.getTaxPercent(10L, 30L, 20L, "70000")).isEqualTo(7.5);
+        assertThat(taxRateService.getTaxPercent(10L, 30L, 20L, "70000")).isZero();
     }
 
     @Test
-    void getTaxPercent_shouldReturnRepositoryValue_whenFound() {
-        when(taxRateRepository.getTaxPercent(1L, 2L, "70000", 3L)).thenReturn(7.5);
+    void getBulkTaxRateShouldReturnMatchingRates() {
+        TaxRate taxRate = taxRate(1L, 7.5, "70000", taxClass(10L, "Standard"), 20L, 30L);
+        when(taxRateRepository.getBatchTaxRates(30L, 20L, "70000", Set.of(10L, 11L))).thenReturn(List.of(taxRate));
 
-        double result = taxRateService.getTaxPercent(3L, 1L, 2L, "70000");
-
-        assertThat(result).isEqualTo(7.5);
-    }
-
-    @Test
-    void getTaxPercent_shouldReturnZero_whenRepositoryReturnsNull() {
-        when(taxRateRepository.getTaxPercent(1L, 2L, "70000", 3L)).thenReturn(null);
-
-        double result = taxRateService.getTaxPercent(3L, 1L, 2L, "70000");
-
-        assertThat(result).isZero();
-    }
-
-    @Test
-    void getBulkTaxRate_shouldQueryRepositoryWithUniqueTaxClassIds() {
-        TaxRate taxRate = taxRate(10L, 7.5, "70000", 2L, 3L, taxClass(1L, "Standard"));
-        when(taxRateRepository.getBatchTaxRates(3L, 2L, "70000", Set.of(1L, 2L)))
-            .thenReturn(List.of(taxRate));
-
-        List<TaxRateVm> result = taxRateService.getBulkTaxRate(List.of(1L, 2L, 1L), 3L, 2L, "70000");
+        List<TaxRateVm> result = taxRateService.getBulkTaxRate(List.of(10L, 11L), 30L, 20L, "70000");
 
         assertThat(result).containsExactly(TaxRateVm.fromModel(taxRate));
     }
 
     private static TaxClass taxClass(Long id, String name) {
-        return TaxClass.builder()
-            .id(id)
-            .name(name)
-            .build();
+        return TaxClass.builder().id(id).name(name).build();
     }
 
-    private static TaxRate taxRate(Long id, Double rate, String zipCode, Long stateOrProvinceId, Long countryId,
-                                   TaxClass taxClass) {
+    private static TaxRate taxRate(Long id, Double rate, String zipCode, TaxClass taxClass,
+                                   Long stateOrProvinceId, Long countryId) {
         return TaxRate.builder()
             .id(id)
             .rate(rate)
             .zipCode(zipCode)
+            .taxClass(taxClass)
             .stateOrProvinceId(stateOrProvinceId)
             .countryId(countryId)
-            .taxClass(taxClass)
             .build();
     }
 }

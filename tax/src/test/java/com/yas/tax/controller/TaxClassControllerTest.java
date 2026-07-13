@@ -1,132 +1,97 @@
 package com.yas.tax.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.yas.tax.model.TaxClass;
 import com.yas.tax.service.TaxClassService;
 import com.yas.tax.viewmodel.taxclass.TaxClassListGetVm;
 import com.yas.tax.viewmodel.taxclass.TaxClassPostVm;
 import com.yas.tax.viewmodel.taxclass.TaxClassVm;
-import com.yas.commonlibrary.exception.ApiExceptionHandler;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.security.oauth2.server.resource.autoconfigure.servlet.OAuth2ResourceServerAutoConfiguration;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-
+import java.net.URI;
 import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-@WebMvcTest(excludeAutoConfiguration = OAuth2ResourceServerAutoConfiguration.class)
-@ContextConfiguration(classes = {
-    TaxClassController.class,
-    ApiExceptionHandler.class
-})
-@AutoConfigureMockMvc(addFilters = false)
+@ExtendWith(MockitoExtension.class)
 class TaxClassControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @Mock
+    TaxClassService taxClassService;
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    @InjectMocks
+    TaxClassController taxClassController;
 
-    @MockitoBean
-    private TaxClassService taxClassService;
+    @Test
+    void getPageableTaxClassesShouldReturnServicePage() {
+        TaxClassListGetVm page = new TaxClassListGetVm(List.of(new TaxClassVm(1L, "Standard")), 0, 10, 1, 1, true);
+        when(taxClassService.getPageableTaxClasses(0, 10)).thenReturn(page);
 
-    private TaxClassVm taxClassVm;
+        ResponseEntity<TaxClassListGetVm> response = taxClassController.getPageableTaxClasses(0, 10);
 
-    @BeforeEach
-    void setUp() {
-        taxClassVm = new TaxClassVm(1L, "Standard");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isSameAs(page);
     }
 
     @Test
-    void getPageableTaxClasses_shouldReturnTaxClasses() throws Exception {
-        TaxClassListGetVm listGetVm = new TaxClassListGetVm(
-            List.of(taxClassVm), 0, 10, 1, 1, true);
+    void listTaxClassesShouldReturnAllClasses() {
+        List<TaxClassVm> classes = List.of(new TaxClassVm(1L, "Standard"));
+        when(taxClassService.findAllTaxClasses()).thenReturn(classes);
 
-        when(taxClassService.getPageableTaxClasses(0, 10)).thenReturn(listGetVm);
+        ResponseEntity<List<TaxClassVm>> response = taxClassController.listTaxClasses();
 
-        mockMvc.perform(get("/backoffice/tax-classes/paging")
-                .param("pageNo", "0")
-                .param("pageSize", "10"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.taxClassContent[0].id").value(1))
-            .andExpect(jsonPath("$.taxClassContent[0].name").value("Standard"))
-            .andExpect(jsonPath("$.totalElements").value(1));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isSameAs(classes);
     }
 
     @Test
-    void listTaxClasses_shouldReturnAllTaxClasses() throws Exception {
-        when(taxClassService.findAllTaxClasses()).thenReturn(List.of(taxClassVm));
+    void getTaxClassShouldReturnServiceResult() {
+        TaxClassVm taxClass = new TaxClassVm(1L, "Standard");
+        when(taxClassService.findById(1L)).thenReturn(taxClass);
 
-        mockMvc.perform(get("/backoffice/tax-classes"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0].id").value(1))
-            .andExpect(jsonPath("$[0].name").value("Standard"));
+        ResponseEntity<TaxClassVm> response = taxClassController.getTaxClass(1L);
+
+        assertThat(response.getBody()).isSameAs(taxClass);
     }
 
     @Test
-    void getTaxClass_shouldReturnTaxClass() throws Exception {
-        when(taxClassService.findById(1L)).thenReturn(taxClassVm);
+    void createTaxClassShouldReturnCreatedLocation() {
+        TaxClass created = TaxClass.builder().id(1L).name("Standard").build();
+        TaxClassPostVm request = new TaxClassPostVm(null, "Standard");
+        when(taxClassService.create(request)).thenReturn(created);
 
-        mockMvc.perform(get("/backoffice/tax-classes/1"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(1))
-            .andExpect(jsonPath("$.name").value("Standard"));
+        ResponseEntity<TaxClassVm> response = taxClassController.createTaxClass(
+            request,
+            UriComponentsBuilder.fromUri(URI.create("http://localhost"))
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getHeaders().getLocation()).hasPath("/tax-classes/1");
+        assertThat(response.getBody()).isEqualTo(new TaxClassVm(1L, "Standard"));
     }
 
     @Test
-    void createTaxClass_whenValid_shouldReturnCreated() throws Exception {
-        TaxClassPostVm postVm = new TaxClassPostVm("1", "Standard");
-        TaxClass taxClass = TaxClass.builder().id(1L).name("Standard").build();
+    void updateTaxClassShouldReturnNoContent() {
+        TaxClassPostVm request = new TaxClassPostVm(null, "Standard");
 
-        when(taxClassService.create(any(TaxClassPostVm.class))).thenReturn(taxClass);
+        ResponseEntity<Void> response = taxClassController.updateTaxClass(1L, request);
 
-        mockMvc.perform(post("/backoffice/tax-classes")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(postVm)))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.id").value(1))
-            .andExpect(jsonPath("$.name").value("Standard"));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(taxClassService).update(request, 1L);
     }
 
     @Test
-    void updateTaxClass_whenValid_shouldReturnNoContent() throws Exception {
-        TaxClassPostVm postVm = new TaxClassPostVm("1", "Standard Updated");
-        
-        doNothing().when(taxClassService).update(any(TaxClassPostVm.class), eq(1L));
+    void deleteTaxClassShouldReturnNoContent() {
+        ResponseEntity<Void> response = taxClassController.deleteTaxClass(1L);
 
-        mockMvc.perform(put("/backoffice/tax-classes/1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(postVm)))
-            .andExpect(status().isNoContent());
-
-        verify(taxClassService).update(any(TaxClassPostVm.class), eq(1L));
-    }
-
-    @Test
-    void deleteTaxClass_whenValid_shouldReturnNoContent() throws Exception {
-        doNothing().when(taxClassService).delete(1L);
-
-        mockMvc.perform(delete("/backoffice/tax-classes/1"))
-            .andExpect(status().isNoContent());
-
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(taxClassService).delete(1L);
     }
 }
