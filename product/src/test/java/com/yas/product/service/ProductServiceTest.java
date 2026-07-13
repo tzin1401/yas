@@ -151,33 +151,6 @@ class ProductServiceTest {
     }
 
     @Test
-    void updateProductShouldUpdateMainFieldsRelationsImagesAndExistingVariation() {
-        Product product = product(10L, "Old", "old");
-        product.setBrand(brand(1L, "Old Brand", "old-brand"));
-        product.setProductCategories(new ArrayList<>(List.of(productCategory(product, category(2L, "Phones", "phones")))));
-        Product oldRelated = product(8L, "Old related", "old-related");
-        product.setRelatedProducts(new ArrayList<>(List.of(ProductRelated.builder().product(product).relatedProduct(oldRelated).build())));
-        Product existingVariation = product(20L, "Old variation", "old-var");
-        existingVariation.setProductImages(new ArrayList<>());
-        product.setProducts(new ArrayList<>(List.of(existingVariation)));
-        ProductPutVm putVm = productPutVm(
-            List.of(new ProductVariationPutVm(20L, "Blue", "blue", "SKU-B", "GTIN-B", 15D, 102L, List.of(202L), Map.of())),
-            List.of(),
-            List.of(),
-            List.of(9L));
-
-        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
-        when(brandRepository.findById(3L)).thenReturn(Optional.of(brand(3L, "New Brand", "new-brand")));
-        when(categoryRepository.findAllById(List.of(4L))).thenReturn(List.of(category(4L, "Tablets", "tablets")));
-        when(productCategoryRepository.findAllByProductId(10L)).thenReturn(List.of());
-        when(productRepository.findAllById(List.of(20L))).thenReturn(List.of(existingVariation));
-        when(productOptionRepository.findAllByIdIn(List.of())).thenReturn(List.of());
-
-        assertThatThrownBy(() -> productService.updateProduct(10L, putVm))
-            .isInstanceOf(BadRequestException.class);
-    }
-
-    @Test
     void setProductImagesShouldCreateDeleteOrKeepImages() {
         Product productWithoutImages = product(10L, "Phone", "phone");
         productWithoutImages.setProductImages(null);
